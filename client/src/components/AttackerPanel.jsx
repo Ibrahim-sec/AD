@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Terminal, Server, Shield } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { cn } from "@/lib/utils"; // Assuming you have cn utility
+import { cn } from "@/lib/utils";
 
 export default function AttackerPanel({ 
   history, 
@@ -15,30 +15,46 @@ export default function AttackerPanel({
   hintsAvailable = false
 }) {
   const [currentCommand, setCurrentCommand] = useState('');
+  
+  // Create separate refs for each scrollable area and its end-point
+  const terminalScrollRef = useRef(null);
   const terminalEndRef = useRef(null);
-  const scrollContainerRef = useRef(null);
+  const logsScrollRef = useRef(null);
+  const logsEndRef = useRef(null);
+
   const inputRef = useRef(null);
 
   // Determine the primary view to display in the main panel
   const currentTab = activeMachine === 'attacker' ? 'attacker-console' : 'logs-view';
   
   // Internal state for selected machine when on the 'logs-view' tab
-  const [logMachine, setLogMachine] = useState('internal');
+  // Default to 'internal' when switching to logs, unless it's already 'dc'
+  const [logMachine, setLogMachine] = useState(activeMachine === 'dc' ? 'dc' : 'internal');
 
-  // Auto-scroll logic (updated to use new scrollContainerRef)
+  // FIX: Smart scroll for Attacker Terminal
   useEffect(() => {
-    const element = scrollContainerRef.current;
-
+    const element = terminalScrollRef.current;
     if (element) {
-      // Only auto-scroll if actively processing OR if user is near the bottom
       const isScrolledToBottom = 
         element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
-
       if (isProcessing || isScrolledToBottom) {
         terminalEndRef.current?.scrollIntoView({ behavior: 'smooth' });
       }
     }
-  }, [history, serverHistory, isProcessing]);
+  }, [history, isProcessing]); // Only depends on attacker history
+
+  // FIX: Smart scroll for Server Logs
+  useEffect(() => {
+    const element = logsScrollRef.current;
+    if (element) {
+      const isScrolledToBottom = 
+        element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
+      // Logs only auto-scroll if user is already at the bottom
+      if (isScrolledToBottom) {
+        logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+  }, [serverHistory]); // Only depends on server history
 
   // Focus input on mount/tab change
   useEffect(() => {
@@ -57,6 +73,21 @@ export default function AttackerPanel({
   const handleTerminalClick = () => {
     inputRef.current?.focus();
   };
+  
+  // When user clicks the main "Logs" tab, update the active machine
+  const handleTabChange = (value) => {
+      if (value === 'attacker-console') {
+          onMachineChange('attacker');
+      } else {
+          onMachineChange(logMachine);
+      }
+  };
+
+  // When user clicks a sub-tab (e.g., DC), update both log view and active machine
+  const handleLogMachineChange = (machine) => {
+    setLogMachine(machine);
+    onMachineChange(machine);
+  };
 
   const getMachineInfo = (machine) => {
     switch (machine) {
@@ -65,16 +96,14 @@ export default function AttackerPanel({
           hostname: network.target.hostname,
           ip: network.target.ip,
           role: 'Internal Server',
-          logs: serverHistory.filter(e => e.type !== 'system')
+          logs: serverHistory // Assuming serverHistory contains all non-attacker logs
         };
       case 'dc':
         return {
           hostname: 'DC01.contoso.local',
           ip: '10.0.1.10',
           role: 'Domain Controller',
-          // Assuming DC logs are mixed into serverHistory, we filter specifically for DC entries
-          // A more robust app would have separate DC logs. For now, we reuse the history and clarify the source.
-          logs: serverHistory.filter(e => e.type !== 'system') 
+          logs: serverHistory // Both internal and DC logs share serverHistory
         };
       default:
         return {
@@ -95,7 +124,7 @@ export default function AttackerPanel({
           <span className="server-text">{entry.text}</span>
         </div>
       ))}
-      <div ref={terminalEndRef} />
+      <div ref={logsEndRef} /> {/* Attach end ref for log scrolling */}
     </div>
   );
 
@@ -103,7 +132,7 @@ export default function AttackerPanel({
     const attackerInfo = getMachineInfo('attacker');
     
     return (
-      <div className="terminal-output">
+      <div className="terminal-output" ref={terminalScrollRef}> {/* Attach scroll ref */}
         {attackerInfo.logs.map((entry, index) => (
           <div key={index} className={`terminal-line ${entry.type}`}>
             {entry.type === 'command' && <span className="prompt-symbol">$</span>}
@@ -111,7 +140,7 @@ export default function AttackerPanel({
           </div>
         ))}
         
-        {/* Command input line */}
+        {/* Command input line - only show on attacker machine */}
         {activeMachine === 'attacker' && !isProcessing && (
           <form onSubmit={handleSubmit} className="terminal-input-line">
             <span className="prompt">root@{network.attacker.hostname}:~#</span>
@@ -120,7 +149,6 @@ export default function AttackerPanel({
               type="text"
               value={currentCommand}
               onChange={(e) => setCurrentCommand(e.target.value)}
-              // onKeyDown={handleKeyDown} - Removed here as Tab is for machine switching now done in logs
               className="terminal-input"
               disabled={isProcessing}
               autoComplete="off"
@@ -135,16 +163,24 @@ export default function AttackerPanel({
             <span className="processing-indicator">Processing...</span>
           </div>
         )}
-        <div ref={terminalEndRef} />
+        <div ref={terminalEndRef} /> {/* Attach end ref for terminal scrolling */}
       </div>
     );
   };
   
   const currentLogInfo = getMachineInfo(logMachine);
+  const activeIp = (currentTab === 'attacker-console' || activeMachine === 'attacker') 
+    ? network.attacker.ip 
+    : currentLogInfo.ip;
 
   return (
     <div className="panel attacker-panel">
-      <Tabs defaultValue="attacker-console" className="h-full w-full flex flex-col" value={currentTab} onValueChange={(v) => onMachineChange(v === 'attacker-console' ? 'attacker' : logMachine)}>
+      <Tabs 
+        defaultValue="attacker-console" 
+        className="h-full w-full flex flex-col" 
+        value={currentTab} 
+        onValueChange={handleTabChange}
+      >
         
         {/* Panel Header/TabsList - Always visible */}
         <div className="panel-header">
@@ -160,7 +196,7 @@ export default function AttackerPanel({
           </TabsList>
           
           <span className="panel-badge ml-auto">
-            {currentTab === 'attacker-console' ? network.attacker.ip : currentLogInfo.ip}
+            {activeIp}
           </span>
           {activeMachine === 'attacker' && hintsAvailable && onShowHint && (
             <button className="hint-button" onClick={onShowHint} title="Get a hint for the current step">
@@ -172,7 +208,7 @@ export default function AttackerPanel({
         <div 
           className="panel-content terminal-content" 
           onClick={handleTerminalClick}
-          ref={scrollContainerRef}
+          // This ref is no longer needed as scrolling is on the children
         >
           {/* TAB CONTENT: Attacker Terminal */}
           <TabsContent value="attacker-console" className="p-0 h-full">
@@ -186,7 +222,7 @@ export default function AttackerPanel({
             <div className="machine-tabs bg-transparent">
                 <button 
                   className={cn("machine-tab", logMachine === 'internal' && 'active')}
-                  onClick={() => setLogMachine('internal')}
+                  onClick={() => handleLogMachineChange('internal')}
                   title="View Internal Server Logs"
                 >
                   <Server size={16} />
@@ -194,7 +230,7 @@ export default function AttackerPanel({
                 </button>
                 <button 
                   className={cn("machine-tab", logMachine === 'dc' && 'active')}
-                  onClick={() => setLogMachine('dc')}
+                  onClick={() => handleLogMachineChange('dc')}
                   title="View Domain Controller Logs"
                 >
                   <Shield size={16} />
@@ -203,7 +239,10 @@ export default function AttackerPanel({
             </div>
             
             {/* Log Output */}
-            <div className="server-content flex-1 overflow-y-auto">
+            <div 
+              className="server-content flex-1 overflow-y-auto" 
+              ref={logsScrollRef} /* Attach scroll ref for logs */
+            >
                 {renderLogOutput(currentLogInfo.logs)}
             </div>
             
