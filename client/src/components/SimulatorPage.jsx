@@ -285,7 +285,7 @@ export default function SimulatorPage({
       <div className="main-layout">
         <div className="main-content">
           <div className="simulation-page-grid">
-            {/* COLUMN 1: Guide Panel */}
+            {/* COLUMN 1: Guide Panel (Fixed Width portion) */}
             <GuidePanel 
               scenario={currentScenario}
               currentStep={currentStep}
@@ -297,7 +297,7 @@ export default function SimulatorPage({
               }}
             />
             
-            {/* COLUMN 2: Unified Terminal & Logs Panel */}
+            {/* COLUMN 2: Unified Terminal & Logs Panel (Flexible portion) */}
             <AttackerPanel 
               history={attackerHistory}
               onCommandSubmit={handleCommandSubmit}
