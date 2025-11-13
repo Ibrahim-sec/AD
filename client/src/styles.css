@@ -245,6 +245,17 @@ body {
 }
 
 /* NEW: Style for the main simulation column */
+.simulation-page-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 3fr 7fr; /* Guide (30%) and Terminal (70%) */
+  gap: var(--panel-gap);
+  overflow: hidden;
+  min-width: 0;
+  min-height: 0; /* Crucial: Ensures grid respects flex parent's height */
+}
+
+/* New: Style for the main simulation column */
 .simulation-main-column {
   display: flex;
   flex-direction: column;
@@ -723,9 +734,10 @@ body {
    =================================== */
 .attacker-panel {
   background: var(--terminal-bg);
-  display: flex; /* ADDED for internal layout control */
-  flex-direction: column; /* ADDED for internal layout control */
-  flex: 1; /* NEW: Allows the terminal to fill remaining vertical space */
+  display: flex;
+  flex-direction: column;
+  flex: 1; /* FIX 1: This forces the terminal panel to fill the remaining height */
+  min-height: 0; /* Ensures the panel shrinks correctly within the flex column */
 }
 
 .machine-tabs {
@@ -771,6 +783,7 @@ body {
   overflow-y: auto; 
   display: flex;
   flex-direction: column;
+  min-height: 0; /* FIX 2: Ensures the content wrapper shrinks to allow scroll */
 }
 
 .terminal-output {
