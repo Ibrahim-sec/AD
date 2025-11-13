@@ -1,5 +1,3 @@
-// ibrahim-sec/ad/AD-5841767089ae61855dcacae6dd31352eaf2afbaf/client/src/App.jsx
-
 import { useState, useEffect } from 'react';
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -8,7 +6,7 @@ import ErrorBoundary from "./components/ErrorBoundary.tsx";
 import Header from './components/Header';
 import GuidePanel from './components/GuidePanel';
 import AttackerPanel from './components/AttackerPanel';
-import InternalPanel from './components/InternalPanel';
+// REMOVED: import InternalPanel - Logic moved to AttackerPanel
 import ScenarioSelector from './components/ScenarioSelector';
 import NetworkMap from './components/NetworkMap';
 import PlayerHUD from './components/PlayerHUD';
@@ -79,7 +77,7 @@ function SimulatorApp() {
   // Is currently displaying output (animating)
   const [isProcessing, setIsProcessing] = useState(false);
   
-  // Currently active machine tab
+  // Currently active machine tab: 'attacker' (console) or 'internal'/'dc' (log view)
   const [activeMachine, setActiveMachine] = useState('attacker');
   
   // Network map highlighting
@@ -426,14 +424,14 @@ function SimulatorApp() {
       <div className="main-layout">
         <div className="main-content">
           <div className="main-grid">
-            {/* COLUMN 1: Scenario Selector */}
+            {/* COLUMN 1: Scenario Selector (Fixed Width) */}
             <ScenarioSelector 
               currentScenarioId={currentScenarioId}
               customScenarios={customScenarios}
               onScenarioSelect={handleScenarioSelect}
             />
             
-            {/* COLUMN 2: Main Simulation Area (Stacked Panels) - NEW DESIGN */}
+            {/* COLUMN 2: Main Simulation Area (Flexible Stack) - NEW DESIGN */}
             <div className="simulation-main-column">
               {/* Row 1: Collapsible Guide Panel */}
               <GuidePanel 
@@ -446,24 +444,20 @@ function SimulatorApp() {
                 }}
               />
               
-              {/* Row 2: Attacker Terminal (Takes majority of remaining space) */}
+              {/* Row 2: Unified Terminal & Logs Panel (Takes remaining vertical space) */}
               <AttackerPanel 
                 history={attackerHistory}
                 onCommandSubmit={handleCommandSubmit}
                 isProcessing={isProcessing}
                 network={currentScenario.network}
-                activeMachine={activeMachine}
+                activeMachine={activeMachine} // Passed down to control tab state
                 onMachineChange={setActiveMachine}
                 serverHistory={serverHistory}
                 onShowHint={() => handleShowHint(currentStep)}
                 hintsAvailable={currentStep < currentScenario.steps.length}
               />
               
-              {/* Row 3: Internal Server Logs */}
-              <InternalPanel 
-                history={serverHistory}
-                network={currentScenario.network}
-              />
+              {/* REMOVED: InternalPanel is now obsolete. */}
             </div>
           </div>
         </div>
