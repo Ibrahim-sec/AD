@@ -37,8 +37,9 @@ body {
   font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
   background-color: #010409;
   color: var(--terminal-text);
-  /* REMOVED: overflow: hidden; */
+  /* overflow: hidden; Removed from initial setup */
 }
+
 /* ===================================
    Simulator Container
    =================================== */
@@ -226,7 +227,7 @@ body {
   flex: 1;
   display: flex;
   flex-direction: column;
-  height: auto; /* CHANGED: Removed fixed calc height. Let it grow */
+  height: auto; /* CHANGED: Removed fixed height, relies on parent flex:1 */
   overflow: hidden;
 }
 
@@ -236,7 +237,7 @@ body {
   flex-direction: column;
   gap: var(--panel-gap);
   padding: var(--panel-gap);
-  overflow: hidden; /* FIX 2.1 Applied here */
+  overflow: hidden; /* FIXED: Prevents viewport scrolling when resizing internal panels */
   overflow-x: hidden;
   min-width: 0;
   min-height: 0;
@@ -632,28 +633,20 @@ body {
   color: var(--accent-color);
 }
 
-/* CHANGE 2: Define terminal-content as the scrolling container */
-.panel-content {
-  flex: 1;
-  overflow-y: auto;
-  padding: 16px; /* This is the default padding for all panel content */
-}
-
 .terminal-content {
   padding: 0;
   cursor: text;
-  
-  /* ADDED to ensure it occupies space and scrolls correctly */
-  flex: 1; 
-  overflow-y: auto; 
+  flex: 1; /* ADDED: Explicitly define as flex item to fill remaining space */
+  overflow-y: auto; /* ADDED: Make the content area itself scrollable (FIX) */
 }
 
 .terminal-output {
-  padding: 16px; /* Keep padding here, applied to the inner element */
+  padding: 16px;
   font-family: 'Courier New', monospace;
   font-size: 13px;
   line-height: 1.5;
 }
+
 .terminal-line {
   margin: 2px 0;
   display: flex;
