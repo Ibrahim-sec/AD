@@ -14,12 +14,26 @@ export default function AttackerPanel({
 }) {
   const [currentCommand, setCurrentCommand] = useState('');
   const terminalEndRef = useRef(null);
+  const scrollContainerRef = useRef(null); // NEW: Ref for the scrollable container
   const inputRef = useRef(null);
 
   // Auto-scroll to bottom when history updates
   useEffect(() => {
-    terminalEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [history, serverHistory]);
+    const element = scrollContainerRef.current;
+
+    if (element) {
+      // Check if the user is already scrolled near the bottom (within 50px threshold)
+      // This is necessary to prevent overriding manual scrolling to view history.
+      const isScrolledToBottom = 
+        element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
+
+      // Only auto-scroll if the terminal is actively typing/processing 
+      // OR if the user is already scrolled to the very bottom.
+      if (isProcessing || isScrolledToBottom) {
+        terminalEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+  }, [history, serverHistory, isProcessing]);
 
   // Focus input on mount
   useEffect(() => {
@@ -83,7 +97,6 @@ export default function AttackerPanel({
       <div className="panel-header">
         <Terminal size={20} />
         <h2>Machine Terminal</h2>
-        {/* DESIGN FIX APPLIED: Removed dynamic color classes (red/blue/green) */}
         <span className="panel-badge">
           {machineInfo.ip}
         </span>
@@ -122,7 +135,11 @@ export default function AttackerPanel({
         </button>
       </div>
       
-      <div className="panel-content terminal-content" onClick={handleTerminalClick}>
+      <div 
+        className="panel-content terminal-content" 
+        onClick={handleTerminalClick}
+        ref={scrollContainerRef} /* ATTACHED SCROLL REF */
+      >
         <div className="terminal-output">
           {displayHistory.map((entry, index) => (
             <div key={index} className={`terminal-line ${entry.type}`}>
