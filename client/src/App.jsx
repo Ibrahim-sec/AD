@@ -1,3 +1,5 @@
+// ibrahim-sec/ad/AD-5841767089ae61855dcacae6dd31352eaf2afbaf/client/src/App.jsx
+
 import { useState, useEffect } from 'react';
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -85,7 +87,8 @@ function SimulatorApp() {
   const [highlightedArrow, setHighlightedArrow] = useState(null);
 
   // Gamification state
-  const [showMissionBriefing, setShowMissionBriefing] = useState(true);
+  // FIX 1: Initialize to false to prevent automatic open on first load
+  const [showMissionBriefing, setShowMissionBriefing] = useState(false); 
   const [showMissionDebrief, setShowMissionDebrief] = useState(false);
   const [showQuiz, setShowQuiz] = useState(false);
   const [showAchievements, setShowAchievements] = useState(false);
@@ -101,7 +104,8 @@ function SimulatorApp() {
   // Initialize history when scenario changes
   useEffect(() => {
     resetScenario();
-    setShowMissionBriefing(true);
+    // FIX 2: Removed setShowMissionBriefing(true) from here. 
+    // It will now only open when explicitly triggered by handleScenarioSelect.
     setShowMissionDebrief(false);
     setShowQuiz(false);
     setScenarioStats({
@@ -340,6 +344,8 @@ function SimulatorApp() {
       }
       
       setCurrentScenarioId(scenarioId);
+      // FIX 3: Open the briefing modal explicitly only when a user selects a new scenario
+      setShowMissionBriefing(true); 
       if (import.meta.env.DEV) {
         console.log('[DEBUG] Scenario selected successfully');
       }
@@ -417,7 +423,8 @@ function SimulatorApp() {
       />
       
       <div className="mode-toggle-bar">
-        <button onClick={() => setAppMode('play')} className="mode-btn active">Play Scenarios</button>
+        {/* FIX: Set bloodhound as default scenario if user switches from editor without selecting one. */}
+        <button onClick={() => { setAppMode('play'); handleScenarioSelect(currentScenarioId || 'bloodhound'); }} className="mode-btn active">Play Scenarios</button>
         <button onClick={() => setAppMode('editor')} className="mode-btn">Scenario Editor</button>
       </div>
       
