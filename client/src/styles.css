@@ -582,6 +582,9 @@ body {
    =================================== */
 .attacker-panel {
   background: var(--terminal-bg);
+  /* ADDED: Make the panel itself a flex container for strict layout control */
+  display: flex; 
+  flex-direction: column; 
 }
 
 .machine-tabs {
@@ -623,15 +626,23 @@ body {
 .terminal-content {
   padding: 0;
   cursor: text;
-  flex: 1; /* ADDED: Explicitly define as flex item to fill remaining space */
-  overflow-y: auto; /* ADDED: Make the content area itself scrollable (FIX) */
+  
+  /* ADDED: Explicit flex properties for internal scroll containment (The Fix) */
+  flex: 1; 
+  overflow-y: auto; 
+  display: flex;
+  flex-direction: column;
 }
-
 .terminal-output {
   padding: 16px;
   font-family: 'Courier New', monospace;
   font-size: 13px;
   line-height: 1.5;
+  
+  /* Must ensure the output section doesn't push the form out of view */
+  flex: 1;
+  /* Make output internally scrollable if needed */
+  overflow-y: auto; 
 }
 
 .terminal-line {

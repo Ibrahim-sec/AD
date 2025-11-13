@@ -83,7 +83,7 @@ export default function AttackerPanel({
       <div className="panel-header">
         <Terminal size={20} />
         <h2>Machine Terminal</h2>
-        {/* DESIGN FIX: Removed dynamic red/blue/green classes, relying on unified .panel-badge styling */}
+        {/* DESIGN FIX APPLIED: Removed dynamic color classes (red/blue/green) */}
         <span className="panel-badge">
           {machineInfo.ip}
         </span>
