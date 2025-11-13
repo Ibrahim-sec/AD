@@ -37,7 +37,7 @@ body {
   font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
   background-color: #010409;
   color: var(--terminal-text);
-  /* overflow: hidden; Removed from initial setup */
+  /* overflow: hidden; Removed from previous setup */
 }
 
 /* ===================================
@@ -163,19 +163,10 @@ body {
   fill: var(--guide-bg);
   stroke: var(--border-color);
   stroke-width: 2;
+  /* DESIGN FIX: Ensure machines use unified color on hover/highlight */
 }
 
-.machine.attacker rect {
-  stroke: var(--accent-color);
-}
-
-.machine.target rect {
-  stroke: var(--accent-color);
-}
-
-.machine.dc rect {
-  stroke: var(--accent-color);
-}
+/* REMOVED: Specific machine color overrides (attacker, target, dc) */
 
 .machine.highlighted rect {
   fill: rgba(45, 156, 219, 0.2);
@@ -227,7 +218,7 @@ body {
   flex: 1;
   display: flex;
   flex-direction: column;
-  height: auto; /* CHANGED: Removed fixed height, relies on parent flex:1 */
+  height: auto;
   overflow: hidden;
 }
 
@@ -237,7 +228,7 @@ body {
   flex-direction: column;
   gap: var(--panel-gap);
   padding: var(--panel-gap);
-  overflow: hidden; /* FIXED: Prevents viewport scrolling when resizing internal panels */
+  overflow: hidden;
   overflow-x: hidden;
   min-width: 0;
   min-height: 0;
@@ -246,10 +237,19 @@ body {
 .main-grid {
   flex: 1;
   display: grid;
-  grid-template-columns: var(--sidebar-width) 1.5fr 1.5fr;
+  grid-template-columns: var(--sidebar-width) 1fr; /* DESIGN OVERHAUL: Changed to 2-column layout */
   gap: var(--panel-gap);
   overflow: hidden;
   min-width: 0;
+  min-height: 0;
+}
+
+/* NEW: Style for the main simulation column */
+.simulation-main-column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--panel-gap);
+  overflow: hidden;
   min-height: 0;
 }
 
@@ -382,6 +382,7 @@ body {
   padding: 12px 16px;
   background: rgba(88, 166, 255, 0.05);
   border-bottom: 1px solid var(--border-color);
+  position: relative; /* Added for correct positioning of tutorial toggle */
 }
 
 .panel-header h2 {
@@ -399,12 +400,13 @@ body {
   border-radius: 4px;
   font-weight: 600;
   font-family: 'Courier New', monospace;
-  /* ADDED: Standardize badge appearance */
+  /* DESIGN FIX: Unified badge styling */
   background: rgba(45, 156, 219, 0.2); 
   color: var(--accent-color);
   border: 1px solid rgba(45, 156, 219, 0.4);
 }
 
+/* REMOVED: Redundant machine color badge classes */
 
 .panel-content {
   flex: 1;
@@ -436,6 +438,36 @@ body {
 .guide-panel {
   background: var(--guide-bg);
 }
+
+/* Collapsible Toggle Styles */
+.guide-panel .panel-header button {
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    transition: transform 0.3s ease;
+}
+
+.guide-panel .panel-header button:hover .collapsible-icon {
+    color: var(--accent-color);
+}
+
+.guide-panel .collapsible-icon {
+    color: var(--terminal-text);
+    transition: transform 0.3s ease;
+}
+
+.guide-panel [data-state="closed"] .collapsible-icon {
+    transform: rotate(-90deg);
+}
+
+.guide-panel [data-state="open"] .collapsible-icon {
+    transform: rotate(0deg);
+}
+/* End Collapsible Toggle Styles */
+
 
 .guide-section {
   margin-bottom: 24px;
@@ -582,9 +614,9 @@ body {
    =================================== */
 .attacker-panel {
   background: var(--terminal-bg);
-  /* ADDED: Make the panel itself a flex container for strict layout control */
-  display: flex; 
-  flex-direction: column; 
+  display: flex; /* ADDED for internal layout control */
+  flex-direction: column; /* ADDED for internal layout control */
+  flex: 1; /* NEW: Allows the terminal to fill remaining vertical space */
 }
 
 .machine-tabs {
@@ -626,22 +658,18 @@ body {
 .terminal-content {
   padding: 0;
   cursor: text;
-  
-  /* ADDED: Explicit flex properties for internal scroll containment (The Fix) */
   flex: 1; 
   overflow-y: auto; 
   display: flex;
   flex-direction: column;
 }
+
 .terminal-output {
   padding: 16px;
   font-family: 'Courier New', monospace;
   font-size: 13px;
   line-height: 1.5;
-  
-  /* Must ensure the output section doesn't push the form out of view */
   flex: 1;
-  /* Make output internally scrollable if needed */
   overflow-y: auto; 
 }
 
@@ -710,6 +738,8 @@ body {
   align-items: center;
   gap: 8px;
   margin: 2px 0;
+  /* Add padding to match terminal-output padding */
+  padding: 0 16px 16px 16px; 
 }
 
 .prompt {
@@ -744,6 +774,8 @@ body {
    =================================== */
 .internal-panel {
   background: var(--server-bg);
+  /* NEW: Allows the internal panel to fill remaining space if needed */
+  flex: 1; 
 }
 
 .server-content {

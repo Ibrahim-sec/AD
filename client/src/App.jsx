@@ -87,7 +87,6 @@ function SimulatorApp() {
   const [highlightedArrow, setHighlightedArrow] = useState(null);
 
   // Gamification state
-  // FIX 1: Initialize to false to prevent automatic open on first load
   const [showMissionBriefing, setShowMissionBriefing] = useState(false); 
   const [showMissionDebrief, setShowMissionDebrief] = useState(false);
   const [showQuiz, setShowQuiz] = useState(false);
@@ -104,8 +103,6 @@ function SimulatorApp() {
   // Initialize history when scenario changes
   useEffect(() => {
     resetScenario();
-    // FIX 2: Removed setShowMissionBriefing(true) from here. 
-    // It will now only open when explicitly triggered by handleScenarioSelect.
     setShowMissionDebrief(false);
     setShowQuiz(false);
     setScenarioStats({
@@ -344,7 +341,6 @@ function SimulatorApp() {
       }
       
       setCurrentScenarioId(scenarioId);
-      // FIX 3: Open the briefing modal explicitly only when a user selects a new scenario
       setShowMissionBriefing(true); 
       if (import.meta.env.DEV) {
         console.log('[DEBUG] Scenario selected successfully');
@@ -423,7 +419,6 @@ function SimulatorApp() {
       />
       
       <div className="mode-toggle-bar">
-        {/* FIX: Set bloodhound as default scenario if user switches from editor without selecting one. */}
         <button onClick={() => { setAppMode('play'); handleScenarioSelect(currentScenarioId || 'bloodhound'); }} className="mode-btn active">Play Scenarios</button>
         <button onClick={() => setAppMode('editor')} className="mode-btn">Scenario Editor</button>
       </div>
@@ -431,37 +426,45 @@ function SimulatorApp() {
       <div className="main-layout">
         <div className="main-content">
           <div className="main-grid">
+            {/* COLUMN 1: Scenario Selector */}
             <ScenarioSelector 
               currentScenarioId={currentScenarioId}
               customScenarios={customScenarios}
               onScenarioSelect={handleScenarioSelect}
             />
-            <GuidePanel 
-              scenario={currentScenario}
-              currentStep={currentStep}
-              tutorialMode={tutorialMode}
-              onTutorialToggle={() => {
-                setTutorialMode(!tutorialMode);
-                setProgress(prev => ({ ...prev, tutorialMode: !tutorialMode }));
-              }}
-            />
             
-            <AttackerPanel 
-              history={attackerHistory}
-              onCommandSubmit={handleCommandSubmit}
-              isProcessing={isProcessing}
-              network={currentScenario.network}
-              activeMachine={activeMachine}
-              onMachineChange={setActiveMachine}
-              serverHistory={serverHistory}
-              onShowHint={() => handleShowHint(currentStep)}
-              hintsAvailable={currentStep < currentScenario.steps.length}
-            />
-            
-            <InternalPanel 
-              history={serverHistory}
-              network={currentScenario.network}
-            />
+            {/* COLUMN 2: Main Simulation Area (Stacked Panels) - NEW DESIGN */}
+            <div className="simulation-main-column">
+              {/* Row 1: Collapsible Guide Panel */}
+              <GuidePanel 
+                scenario={currentScenario}
+                currentStep={currentStep}
+                tutorialMode={tutorialMode}
+                onTutorialToggle={() => {
+                  setTutorialMode(!tutorialMode);
+                  setProgress(prev => ({ ...prev, tutorialMode: !tutorialMode }));
+                }}
+              />
+              
+              {/* Row 2: Attacker Terminal (Takes majority of remaining space) */}
+              <AttackerPanel 
+                history={attackerHistory}
+                onCommandSubmit={handleCommandSubmit}
+                isProcessing={isProcessing}
+                network={currentScenario.network}
+                activeMachine={activeMachine}
+                onMachineChange={setActiveMachine}
+                serverHistory={serverHistory}
+                onShowHint={() => handleShowHint(currentStep)}
+                hintsAvailable={currentStep < currentScenario.steps.length}
+              />
+              
+              {/* Row 3: Internal Server Logs */}
+              <InternalPanel 
+                history={serverHistory}
+                network={currentScenario.network}
+              />
+            </div>
           </div>
         </div>
       </div>
