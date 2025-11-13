@@ -113,17 +113,12 @@ body {
 .header-right {
   display: flex;
   align-items: center;
+  /* ADDED: Ensure the hud-section (which is now this element) displays correctly */
+  gap: 32px;
+  flex: 1;
+  justify-content: flex-end;
 }
 
-.step-indicator {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: rgba(88, 166, 255, 0.1);
-  padding: 8px 16px;
-  border-radius: 6px;
-  border: 1px solid rgba(88, 166, 255, 0.3);
-}
 
 .step-label {
   font-size: 12px;
@@ -958,7 +953,7 @@ body {
 .hud-section {
   display: flex;
   gap: 32px;
-  flex: 1;
+  /* flex: 1; <-- This is now on .header-right */
 }
 
 .hud-item {
@@ -990,7 +985,6 @@ body {
   font-weight: 700;
   color: var(--terminal-text);
 }
-
 .hud-scenario {
   text-align: right;
   padding-left: 24px;

@@ -4,7 +4,7 @@ import Header from './Header';
 import GuidePanel from './GuidePanel';
 import AttackerPanel from './AttackerPanel';
 import NetworkMap from './NetworkMap';
-import PlayerHUD from './PlayerHUD';
+// import PlayerHUD from './PlayerHUD'; // REMOVED: No longer needed
 import MissionModal from './MissionModal';
 import QuizPanel from './QuizPanel';
 import AchievementsPanel from './AchievementsPanel';
@@ -267,15 +267,11 @@ export default function SimulatorPage({
         title={currentScenario.title}
         currentStep={currentStep + 1}
         totalSteps={currentScenario.steps.length}
-      />
-
-      <PlayerHUD 
         score={progress.totalScore}
         rank={progress.rank}
-        currentStep={currentStep + 1}
-        totalSteps={currentScenario.steps.length}
-        scenario={currentScenario}
       />
+      
+      {/* REMOVED: PlayerHUD component is now merged into Header */}
       
       <NetworkMap 
         highlightedMachine={highlightedMachine}
