@@ -83,7 +83,8 @@ export default function AttackerPanel({
       <div className="panel-header">
         <Terminal size={20} />
         <h2>Machine Terminal</h2>
-        <span className={`panel-badge ${activeMachine === 'attacker' ? 'red' : activeMachine === 'internal' ? 'blue' : 'green'}`}>
+        {/* DESIGN FIX: Removed dynamic red/blue/green classes, relying on unified .panel-badge styling */}
+        <span className="panel-badge">
           {machineInfo.ip}
         </span>
         {activeMachine === 'attacker' && hintsAvailable && onShowHint && (

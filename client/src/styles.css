@@ -5,12 +5,12 @@
 /* Root Variables */
 :root {
   --header-height: 80px;
-  --network-map-height: 140px;
+  --network-map-height: 120px; /* CHANGED: Reduced height for tighter layout */
   --sidebar-width: 280px;
   --panel-gap: 16px;
   --terminal-bg: #0d1117;
   --terminal-text: #c9d1d9;
-  --terminal-green: #58a6ff;
+  --terminal-green: #2D9CDB; /* CHANGED: Unified terminal green to accent color */
   --terminal-red: #f85149;
   --terminal-yellow: #d29922;
   --guide-bg: #161b22;
@@ -18,10 +18,10 @@
   --server-bg: #0d1117;
   --server-text: #8b949e;
   --border-color: rgba(255, 255, 255, 0.07);
-  --accent-color: #2D9CDB;
-  --accent-red: #2D9CDB;
-  --accent-blue: #2D9CDB;
-  --accent-green: #2D9CDB;
+  --accent-color: #2D9CDB; /* Cyber Blue */
+  --accent-red: #2D9CDB;   /* CHANGED: All accents unified to Cyber Blue */
+  --accent-blue: #2D9CDB;  /* CHANGED: All accents unified to Cyber Blue */
+  --accent-green: #2D9CDB; /* CHANGED: All accents unified to Cyber Blue */
   --panel-bg: #101214;
   --panel-border: 1px solid rgba(255, 255, 255, 0.07);
 }
@@ -399,25 +399,12 @@ body {
   border-radius: 4px;
   font-weight: 600;
   font-family: 'Courier New', monospace;
+  /* ADDED: Standardize badge appearance */
+  background: rgba(45, 156, 219, 0.2); 
+  color: var(--accent-color);
+  border: 1px solid rgba(45, 156, 219, 0.4);
 }
 
-.panel-badge.red {
-  background: rgba(255, 68, 68, 0.2);
-  color: var(--accent-red);
-  border: 1px solid rgba(255, 68, 68, 0.4);
-}
-
-.panel-badge.blue {
-  background: rgba(68, 68, 255, 0.2);
-  color: var(--accent-blue);
-  border: 1px solid rgba(68, 68, 255, 0.4);
-}
-
-.panel-badge.green {
-  background: rgba(68, 255, 68, 0.2);
-  color: var(--accent-green);
-  border: 1px solid rgba(68, 255, 68, 0.4);
-}
 
 .panel-content {
   flex: 1;
@@ -853,7 +840,7 @@ body {
 .player-hud {
   background: linear-gradient(90deg, rgba(13, 17, 23, 0.95) 0%, rgba(22, 27, 34, 0.95) 100%);
   border-bottom: 1px solid var(--border-color);
-  padding: 12px 24px;
+  padding: 10px 24px; /* CHANGED: Reduced vertical padding for tighter layout */
   display: flex;
   justify-content: space-between;
   align-items: center;

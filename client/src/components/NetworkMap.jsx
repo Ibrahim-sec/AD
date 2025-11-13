@@ -7,7 +7,7 @@ export default function NetworkMap({ highlightedMachine, highlightedArrow }) {
         preserveAspectRatio="xMidYMid meet"
       >
         {/* Attacker Machine */}
-        <g className={`machine attacker ${highlightedMachine === 'attacker' ? 'highlighted' : ''}`}>
+        <g className={`machine ${highlightedMachine === 'attacker' ? 'highlighted' : ''}`}>
           <rect x="50" y="30" width="120" height="60" rx="8" />
           <text x="110" y="65" textAnchor="middle" className="machine-label">
             Attacker
@@ -27,7 +27,7 @@ export default function NetworkMap({ highlightedMachine, highlightedArrow }) {
         </g>
 
         {/* Internal Server */}
-        <g className={`machine target ${highlightedMachine === 'target' ? 'highlighted' : ''}`}>
+        <g className={`machine ${highlightedMachine === 'target' ? 'highlighted' : ''}`}>
           <rect x="280" y="30" width="120" height="60" rx="8" />
           <text x="340" y="65" textAnchor="middle" className="machine-label">
             Internal Server
@@ -47,7 +47,7 @@ export default function NetworkMap({ highlightedMachine, highlightedArrow }) {
         </g>
 
         {/* Domain Controller */}
-        <g className={`machine dc ${highlightedMachine === 'dc' ? 'highlighted' : ''}`}>
+        <g className={`machine ${highlightedMachine === 'dc' ? 'highlighted' : ''}`}>
           <rect x="510" y="30" width="120" height="60" rx="8" />
           <text x="570" y="65" textAnchor="middle" className="machine-label">
             Domain Controller
