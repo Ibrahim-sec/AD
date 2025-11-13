@@ -632,18 +632,28 @@ body {
   color: var(--accent-color);
 }
 
+/* CHANGE 2: Define terminal-content as the scrolling container */
+.panel-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px; /* This is the default padding for all panel content */
+}
+
 .terminal-content {
   padding: 0;
   cursor: text;
+  
+  /* ADDED to ensure it occupies space and scrolls correctly */
+  flex: 1; 
+  overflow-y: auto; 
 }
 
 .terminal-output {
-  padding: 16px;
+  padding: 16px; /* Keep padding here, applied to the inner element */
   font-family: 'Courier New', monospace;
   font-size: 13px;
   line-height: 1.5;
 }
-
 .terminal-line {
   margin: 2px 0;
   display: flex;
