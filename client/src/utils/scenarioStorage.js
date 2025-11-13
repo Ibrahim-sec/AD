@@ -1,24 +1,21 @@
 /**
  * Scenario Storage Utilities
- * 
- * Manages custom scenarios in localStorage
+ * * Manages custom scenarios in localStorage
  * Provides CRUD operations for custom scenario persistence
  */
 
-const STORAGE_KEY = 'adTrainer_customScenarios';
+import { safeGetItem, safeSetItem, safeRemoveItem } from '../lib/safeStorage';
+
+// The key used within the safeStorage namespace ('ad-trainer-' prefix is handled by safeStorage)
+const STORAGE_KEY = 'customScenarios';
 
 /**
  * Get all custom scenarios from localStorage
- * @returns {Array} Array of custom scenario objects
+ * @returns {Array} Array of custom scenario objects, defaults to an empty array
  */
 export function getCustomScenarios() {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) : [];
-  } catch (error) {
-    console.error('Error loading custom scenarios:', error);
-    return [];
-  }
+  // Use safeGetItem to automatically handle JSON parsing and errors, defaulting to an empty array
+  return safeGetItem(STORAGE_KEY, []);
 }
 
 /**
@@ -39,8 +36,8 @@ export function saveCustomScenario(scenario) {
       scenarios.push(scenario);
     }
     
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(scenarios));
-    return true;
+    // Use safeSetItem to store the updated list
+    return safeSetItem(STORAGE_KEY, scenarios);
   } catch (error) {
     console.error('Error saving custom scenario:', error);
     return false;
@@ -56,15 +53,19 @@ export function saveCustomScenario(scenario) {
 export function updateCustomScenario(id, updates) {
   try {
     const scenarios = getCustomScenarios();
-    const scenario = scenarios.find(s => s.id === id);
+    const scenarioIndex = scenarios.findIndex(s => s.id === id);
     
-    if (!scenario) {
+    if (scenarioIndex === -1) {
       console.error(`Scenario with ID ${id} not found`);
       return false;
     }
     
-    const updated = { ...scenario, ...updates };
-    return saveCustomScenario(updated);
+    const updated = { ...scenarios[scenarioIndex], ...updates };
+    scenarios[scenarioIndex] = updated; // Update in place
+    
+    // Use safeSetItem to store the updated list
+    return safeSetItem(STORAGE_KEY, scenarios);
+
   } catch (error) {
     console.error('Error updating custom scenario:', error);
     return false;
@@ -80,8 +81,8 @@ export function deleteCustomScenario(id) {
   try {
     const scenarios = getCustomScenarios();
     const filtered = scenarios.filter(s => s.id !== id);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
-    return true;
+    // Use safeSetItem to store the filtered list
+    return safeSetItem(STORAGE_KEY, filtered);
   } catch (error) {
     console.error('Error deleting custom scenario:', error);
     return false;
@@ -103,11 +104,6 @@ export function getCustomScenarioById(id) {
  * @returns {boolean} True if successful
  */
 export function clearAllCustomScenarios() {
-  try {
-    localStorage.removeItem(STORAGE_KEY);
-    return true;
-  } catch (error) {
-    console.error('Error clearing custom scenarios:', error);
-    return false;
-  }
+  // Use safeRemoveItem to clear the key
+  return safeRemoveItem(STORAGE_KEY);
 }
