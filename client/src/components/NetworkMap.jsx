@@ -53,7 +53,7 @@ export default function NetworkMap({ highlightedMachine, highlightedArrow }) {
             Domain Controller
           </text>
           <text x="570" y="80" textAnchor="middle" className="machine-ip">
-            10.0.1.10
+            10.0.1.20
           </text>
         </g>
       </svg>

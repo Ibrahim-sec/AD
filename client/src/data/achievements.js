@@ -83,7 +83,7 @@ export const achievements = [
     points: 15,
     condition: (progress) => {
       return progress.scenarioStats.some(s => 
-        s.completed && s.timeSpent < 120000 // 120 seconds in milliseconds
+        s.completed && s.timeSpent < 120 // 120 seconds in seconds
       );
     }
   }

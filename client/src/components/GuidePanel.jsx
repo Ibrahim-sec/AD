@@ -95,7 +95,7 @@ export default function GuidePanel({
                         <button 
                             className={`tutorial-toggle absolute right-10 ${tutorialMode ? 'active' : ''}`}
                             onClick={onTutorialToggle}
-                            title="Toggle tutorial mode for hints and forgiving command matching"
+                            title="Toggle tutorial mode for extra hints on incorrect commands"
                         >
                             <span>Tutorial</span>
                             <div className="toggle-switch">
@@ -131,7 +131,7 @@ export default function GuidePanel({
                                 <div className="guide-text">
                                     <p>{currentGuideStep.description}</p>
                                 </div>
-
+                                
                                 {currentGuideStep.command && (
                                     <div className="command-box">
                                         <div className="command-box-header">
@@ -141,14 +141,14 @@ export default function GuidePanel({
                                         <code className="command-code">{currentGuideStep.command}</code>
                                     </div>
                                 )}
-
+                                
                                 {tutorialMode && currentGuideStep.hintShort && (
                                     <div className="tip-box">
                                         <Lightbulb size={16} />
                                         <span><strong>Hint:</strong> {currentGuideStep.hintShort}</span>
                                     </div>
                                 )}
-
+                                
                                 {currentGuideStep.tip && (
                                     <div className="tip-box">
                                         <Lightbulb size={16} />

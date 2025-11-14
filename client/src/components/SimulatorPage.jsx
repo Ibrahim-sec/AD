@@ -73,7 +73,7 @@ export default function SimulatorPage({
     }
   });
 
-
+  
   // --- MODAL / GAME STATE ---
   
   // MODIFICATION 1: Make useState check localStorage
@@ -135,6 +135,19 @@ export default function SimulatorPage({
     });
     setHintsShown({});
   }, [scenarioId, briefingStorageKey]); // Add briefingStorageKey to dependency array
+
+  // Automatically process steps that have no expected command. When a step's expectedCommand is null,
+  // there is no user input required; instead we immediately run the step's outputs. This effect watches
+  // the current step and triggers processing for informational steps without requiring a command.
+  useEffect(() => {
+    const step = currentScenario?.steps[currentStep];
+    if (step && step.expectedCommand == null && !isProcessing) {
+      // Auto-advance steps with no expected command (information-only)
+      setIsProcessing(true);
+      processStepOutput(step);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentStep, currentScenario, isProcessing]);
 
   const resetScenario = () => {
     setCurrentStep(0);
@@ -285,6 +298,9 @@ export default function SimulatorPage({
       setScenarioStats(prev => ({ ...prev, wrongAttempts: prev.wrongAttempts + 1 }));
       
       if (tutorialMode) {
+        // Tutorial mode does not relax the command requirements; it still expects
+        // the exact correct command. This branch only provides an additional hint
+        // when the user enters an incorrect command.
         const step = currentScenario.steps[currentStep];
         setAttackerHistory(prev => [
           ...prev,
