@@ -1,6 +1,14 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/* --- ADD THESE NEW IMPORTS --- */
+@import "./styles/global.css";
+@import "./styles/home.css";
+@import "./styles/simulator.css";
+@import "./styles/modals.css";
+@import "./styles/editor.css";
+/* ----------------------------- */
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {

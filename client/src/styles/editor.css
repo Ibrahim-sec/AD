@@ -1,0 +1,478 @@
+/* ===================================
+   Scenario Editor Styling
+   =================================== */
+
+.editor-mode-container {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0d1117 0%, #1a1f2e 100%);
+  color: var(--terminal-green);
+  padding: 20px;
+  font-family: inherit;
+  overflow-y: auto;
+}
+
+/* Scenario Editor */
+.scenario-editor {
+  background: var(--guide-bg);
+  border: 2px solid var(--terminal-green);
+  border-radius: 8px;
+  padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.editor-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+  padding-bottom: 20px;
+  border-bottom: 2px solid var(--terminal-green);
+}
+
+.editor-header h2 {
+  color: var(--terminal-green);
+  font-size: 24px;
+  margin: 0;
+}
+
+.editor-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.editor-actions button {
+  padding: 8px 16px;
+  background: transparent;
+  border: 2px solid var(--terminal-green);
+  color: var(--terminal-green);
+  cursor: pointer;
+  border-radius: 4px;
+  font-weight: bold;
+  transition: all 0.3s ease;
+  font-family: inherit;
+}
+
+.editor-actions button:hover {
+  background: var(--terminal-green);
+  color: #000;
+  box-shadow: 0 0 10px var(--terminal-green);
+}
+
+.editor-actions .btn-primary {
+  background: var(--terminal-green);
+  color: #000;
+}
+
+.editor-actions .btn-primary:hover {
+  background: #44dd44;
+  box-shadow: 0 0 15px var(--terminal-green);
+}
+
+.editor-actions .btn-close {
+  margin-left: auto;
+}
+
+/* Editor Content */
+.editor-content {
+  max-height: 70vh;
+  overflow-y: auto;
+  padding-right: 10px;
+}
+
+.editor-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.editor-content::-webkit-scrollbar-track {
+  background: #0d1117;
+}
+
+.editor-content::-webkit-scrollbar-thumb {
+  background: var(--terminal-green);
+  border-radius: 4px;
+}
+
+/* Editor Sections */
+.editor-section {
+  margin-bottom: 30px;
+  padding: 20px;
+  background: #0d1117;
+  border: 1px solid var(--terminal-green);
+  border-radius: 6px;
+}
+
+.editor-section h3 {
+  color: var(--terminal-green);
+  margin-top: 0;
+  margin-bottom: 20px;
+  font-size: 18px;
+  border-bottom: 1px solid var(--terminal-green);
+  padding-bottom: 10px;
+}
+
+.editor-section h4 {
+  color: var(--terminal-green);
+  margin-top: 15px;
+  margin-bottom: 10px;
+}
+
+/* Form Elements */
+.form-group {
+  margin-bottom: 15px;
+}
+
+.form-group label {
+  display: block;
+  color: var(--terminal-green);
+  margin-bottom: 5px;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.form-group input,
+.form-group textarea,
+.form-group select {
+  width: 100%;
+  padding: 10px;
+  background: #1a1f2e;
+  border: 1px solid var(--terminal-green);
+  color: var(--terminal-green);
+  border-radius: 4px;
+  font-family: inherit;
+  font-size: 14px;
+}
+
+.form-group input:focus,
+.form-group textarea:focus,
+.form-group select:focus {
+  outline: none;
+  box-shadow: 0 0 10px var(--terminal-green);
+  border-color: var(--terminal-green);
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+}
+
+/* Machine Configuration */
+.machine-config {
+  background: #1a1f2e;
+  padding: 15px;
+  border: 1px solid #58a6ff;
+  border-radius: 4px;
+  margin-bottom: 15px;
+}
+
+.machine-config h4 {
+  margin-top: 0;
+  color: #58a6ff;
+}
+
+/* Step Editor */
+.steps-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.steps-header h3 {
+  margin: 0;
+}
+
+.step-editor {
+  background: #1a1f2e;
+  border: 1px solid var(--terminal-green);
+  border-radius: 6px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.step-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid var(--terminal-green);
+}
+
+.step-header h4 {
+  margin: 0;
+  color: var(--terminal-green);
+}
+
+.step-controls {
+  display: flex;
+  gap: 5px;
+}
+
+.btn-small {
+  padding: 5px 10px;
+  background: transparent;
+  border: 1px solid var(--terminal-green);
+  color: var(--terminal-green);
+  cursor: pointer;
+  border-radius: 3px;
+  font-size: 12px;
+  transition: all 0.3s ease;
+  font-family: inherit;
+}
+
+.btn-small:hover {
+  background: var(--terminal-green);
+  color: #000;
+}
+
+.btn-small:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-small.btn-danger {
+  border-color: var(--accent-red);
+  color: var(--accent-red);
+}
+
+.btn-small.btn-danger:hover {
+  background: var(--accent-red);
+  color: #fff;
+}
+
+/* Error and Success Messages */
+.error-box {
+  background: rgba(255, 68, 68, 0.1);
+  border: 2px solid var(--accent-red);
+  color: #ff9999;
+  padding: 15px;
+  border-radius: 6px;
+  margin-bottom: 20px;
+}
+
+.error-box h4 {
+  margin-top: 0;
+  color: var(--accent-red);
+}
+
+.error-box ul {
+  margin: 10px 0 0 20px;
+  padding: 0;
+}
+
+.error-box li {
+  margin-bottom: 5px;
+}
+
+.success-box {
+  background: rgba(68, 255, 68, 0.1);
+  border: 2px solid var(--terminal-green);
+  color: var(--terminal-green);
+  padding: 15px;
+  border-radius: 6px;
+  margin-bottom: 20px;
+  text-align: center;
+  font-weight: bold;
+}
+
+/* Modal Overlay */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content.editor-modal {
+  background: var(--guide-bg);
+  border: 2px solid var(--terminal-green);
+  border-radius: 8px;
+  padding: 30px;
+  max-width: 600px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  color: var(--terminal-green);
+}
+
+.modal-content.editor-modal h3 {
+  margin-top: 0;
+  color: var(--terminal-green);
+  border-bottom: 2px solid var(--terminal-green);
+  padding-bottom: 15px;
+}
+
+.template-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+  margin: 20px 0;
+}
+
+.template-card {
+  background: #0d1117;
+  border: 1px solid var(--terminal-green);
+  border-radius: 6px;
+  padding: 15px;
+  text-align: center;
+}
+
+.template-card h4 {
+  margin-top: 0;
+  color: var(--terminal-green);
+}
+
+.template-card p {
+  font-size: 12px;
+  color: #58a6ff;
+  margin: 10px 0;
+}
+
+.template-card button {
+  width: 100%;
+  padding: 8px;
+  background: var(--terminal-green);
+  color: #000;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: all 0.3s ease;
+  font-family: inherit;
+}
+
+.template-card button:hover {
+  background: #44dd44;
+  box-shadow: 0 0 10px var(--terminal-green);
+}
+
+/* Scenario List (in Editor) */
+.scenario-list {
+  margin-bottom: 30px;
+}
+
+.scenario-list h4 {
+  color: var(--terminal-green);
+  margin-bottom: 15px;
+  font-size: 16px;
+}
+
+.scenario-list.empty {
+  background: #0d1117;
+  border: 1px dashed var(--terminal-green);
+  padding: 20px;
+  border-radius: 6px;
+  text-align: center;
+}
+
+.scenario-list.empty .empty-message {
+  color: #58a6ff;
+  margin: 0;
+}
+
+.scenarios-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 15px;
+}
+
+.scenario-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  margin-bottom: 10px;
+}
+
+.scenario-header h5 {
+  margin: 0;
+  color: var(--terminal-green);
+  flex: 1;
+}
+
+.difficulty-badge {
+  padding: 3px 8px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: bold;
+  white-space: nowrap;
+}
+
+.scenario-target {
+  color: #58a6ff;
+  font-size: 12px;
+  margin: 5px 0;
+}
+
+.scenario-steps {
+  color: #58a6ff;
+  font-size: 12px;
+  margin: 5px 0;
+}
+
+.scenario-actions {
+  display: flex;
+  gap: 5px;
+  margin-top: 10px;
+}
+
+.scenario-actions button {
+  flex: 1;
+  padding: 6px;
+  font-size: 12px;
+}
+
+/* Editor Home */
+.editor-home {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.editor-home h2 {
+  color: var(--terminal-green);
+  margin-bottom: 20px;
+}
+
+.editor-home .editor-actions {
+  margin-bottom: 30px;
+}
+
+.scenario-button.custom {
+  border-left: 3px solid var(--terminal-yellow);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+  
+  .template-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .scenarios-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .editor-actions {
+    flex-direction: column;
+  }
+  
+  .editor-actions button {
+    width: 100%;
+  }
+}

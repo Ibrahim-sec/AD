@@ -1,0 +1,241 @@
+/* ===================================
+   Scenario Selection Page (Home)
+   =================================== */
+
+.scenario-selection-page {
+    width: 100%;
+    max-width: 1200px;
+    padding: 20px;
+    margin: 20px auto; 
+    background: var(--guide-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+}
+
+.scenario-selection-page .selector-header {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.scenario-selection-page h1 {
+    font-size: 28px;
+    color: var(--accent-color);
+    margin: 0;
+}
+
+.scenarios-grid-container {
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
+}
+
+.scenarios-section {
+  margin-bottom: 20px;
+}
+
+.section-title {
+  color: #58a6ff;
+  font-size: 14px;
+  margin: 0 0 10px 0;
+  padding: 5px 0;
+  border-bottom: 1px solid #58a6ff;
+}
+
+/* ===================================
+   NEW CAMPAIGN PATH STYLES
+   =================================== */
+
+.campaign-container {
+  display: flex;
+  flex-direction: row;
+  gap: 16px;
+  overflow-x: auto; /* This makes it scroll horizontally */
+  padding: 16px 4px 20px 4px; /* Space for the scrollbar and cards */
+  background: var(--terminal-bg);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+
+/* Custom scrollbar for the campaign container */
+.campaign-container::-webkit-scrollbar {
+  height: 10px;
+}
+.campaign-container::-webkit-scrollbar-thumb {
+  background: var(--accent-color);
+  border-radius: 5px;
+  border: 2px solid var(--terminal-bg);
+}
+.campaign-container::-webkit-scrollbar-track {
+  background: var(--terminal-bg);
+}
+
+.campaign-tier {
+  flex: 0 0 300px; /* Each column is 300px wide */
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  /* This ensures the tier itself doesn't scroll, the container does */
+  overflow: visible; 
+}
+
+.tier-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--accent-color);
+  text-align: center;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 10px;
+  margin: 0 10px;
+  white-space: nowrap;
+}
+
+.campaign-connector {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--border-color);
+  opacity: 0.5;
+}
+
+/* ===================================
+   Scenario Card Styles
+   =================================== */
+
+.scenarios-list-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+}
+
+.scenario-card {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 20px;
+    background: var(--terminal-bg);
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    color: inherit;
+    font-family: inherit;
+    min-height: 180px;
+}
+
+.scenario-card:hover {
+    border-color: var(--accent-color);
+    box-shadow: 0 0 10px rgba(139, 92, 246, 0.5);
+    transform: translateY(-2px);
+}
+
+.scenario-card .scenario-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 10px;
+    border-bottom: 1px dashed var(--border-color);
+}
+
+.scenario-card .scenario-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--terminal-text);
+    margin: 0;
+}
+
+.scenario-card .scenario-description {
+    font-size: 13px;
+    color: var(--server-text);
+    line-height: 1.5;
+    flex-grow: 1;
+}
+
+.scenario-card .difficulty-badge {
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+/* DIFFICULTY BADGES */
+.scenario-card .difficulty-beginner {
+    background: rgba(34, 197, 94, 0.1);
+    color: var(--terminal-green); 
+    border: 1px solid var(--terminal-green);
+}
+
+.scenario-card .difficulty-intermediate {
+    background: rgba(245, 158, 11, 0.1);
+    color: var(--terminal-yellow);
+    border: 1px solid var(--terminal-yellow);
+}
+
+.scenario-card .difficulty-advanced {
+    background: rgba(244, 63, 94, 0.1);
+    color: var(--terminal-red);
+    border: 1px solid var(--terminal-red);
+}
+
+.scenario-card .scenario-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 10px;
+}
+
+.scenario-card .completion-status {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    color: var(--server-text);
+}
+
+.scenario-card .completion-status.completed {
+    color: var(--terminal-green);
+}
+
+/* ===================================
+   Locked Scenario Styles
+   =================================== */
+
+/* This wrapper is used by the Tooltip */
+.locked-card-wrapper {
+  display: block;
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.scenario-card.is-locked {
+  background: var(--terminal-bg);
+  border-color: var(--border-color);
+  /* Make it feel disabled */
+  filter: grayscale(80%);
+}
+
+.scenario-card.is-locked:hover {
+  /* Remove hover effects */
+  border-color: var(--border-color);
+  box-shadow: none;
+  transform: none;
+}
+
+/* Style for the "Locked" status text */
+.completion-status.locked {
+  color: var(--server-text);
+  opacity: 0.7;
+}
+
+/* Wrapper for the Link to remove underlines */
+.scenario-card-link,
+.scenario-card-link:hover {
+  text-decoration: none;
+  color: inherit;
+}

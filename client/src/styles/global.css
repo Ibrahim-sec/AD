@@ -1,0 +1,336 @@
+/* ===================================
+   AD Attack Simulator Styles
+   =================================== */
+
+:root {
+  /* --- NEW "SLATE & VIOLET" THEME --- */
+  
+  /* Base Backgrounds (Deep Slate) */
+  --background: #020617; /* Slate 950 (Body BG) */
+  --terminal-bg: #0f172a; /* Slate 900 (Terminal Panel/Darkest Elements) */
+  --guide-bg: #1e293b;   /* Slate 800 (Guide Panel/Raised Surfaces) */
+  --server-bg: #0f172a; /* Slate 900 (Logs Panel) */
+  
+  /* Base Text */
+  --terminal-text: #f1f5f9; /* Slate 100 (Bright Text) */
+  --guide-text: #e2e8f0;    /* Slate 200 (Guide Content) */
+  --server-text: #94a3b8;   /* Slate 400 (Muted/Log Text) */
+  
+  /* Borders */
+  --border-color: #334155; /* Slate 700 */
+
+  /* Main Accent Color (Violet) */
+  --accent-color: #8b5cf6; /* Violet 500 */
+  
+  /* Semantic Accents (Modern & Vibrant) */
+  --terminal-green: #22c55e; /* Emerald 500 (Success/Completion) */
+  --terminal-red: #f43f5e;     /* Rose 500 (Errors) */
+  --terminal-yellow: #f59e0b;  /* Amber 500 (Warnings) */
+  
+  /* Old structural variables mapped to new accent */
+  --accent-red: var(--accent-color);
+  --accent-blue: var(--accent-color);
+  --accent-green: var(--accent-color);
+
+  /* --- STRUCTURAL VARIABLES (Unchanged dimensions) --- */
+  --header-height: 80px;
+  --network-map-height: 120px;
+  --sidebar-width: 280px;
+  --panel-gap: 16px;
+  --panel-bg: var(--guide-bg);
+  --panel-border: 1px solid var(--border-color);
+}
+
+/* Global Styles */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  /* Use the new background color */
+  background-color: var(--background); 
+  color: var(--terminal-text);
+  overflow: hidden; 
+}
+
+/* ===================================
+   Main Content Layout
+   =================================== */
+.main-layout {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0; 
+  overflow: hidden;
+}
+
+.main-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--panel-gap);
+  padding: var(--panel-gap);
+  overflow-y: auto; /* Allow vertical scrolling for the whole page content */
+  overflow-x: hidden;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* 1. Simulator Page Grid (2 Columns: Guide + Terminal/Logs) */
+.simulation-page-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 3fr 7fr; /* Guide (30%) and Terminal (70%) */
+  gap: var(--panel-gap);
+  overflow: hidden;
+  min-width: 0;
+  min-height: 0; 
+}
+
+/* 2. Home Page Grid (Single column, centered) */
+.main-home-layout {
+  display: flex;
+  justify-content: flex-start; /* Aligns content to the top */
+  align-items: center; /* Aligns content to the center horizontally */
+  min-height: 100%;
+  overflow-y: auto;
+}
+
+/* ===================================
+   Generic Component Styles
+   =================================== */
+
+/* Mode Toggle Bar (Used on all pages) */
+.mode-toggle-bar {
+  display: flex;
+  gap: 10px;
+  padding: 15px 20px;
+  background: linear-gradient(135deg, #1a1f2e 0%, #0d1117 100%);
+  border-bottom: 2px solid var(--terminal-green);
+  justify-content: center;
+}
+
+.mode-btn {
+  padding: 8px 20px;
+  background: transparent;
+  border: 2px solid var(--terminal-green);
+  color: var(--terminal-green);
+  cursor: pointer;
+  border-radius: 4px;
+  font-weight: bold;
+  transition: all 0.3s ease;
+  font-family: inherit;
+}
+
+.mode-btn:hover {
+  background: var(--terminal-green);
+  color: #000;
+  box-shadow: 0 0 10px var(--terminal-green);
+}
+
+.mode-btn.active {
+  background: var(--terminal-green);
+  color: #000;
+  box-shadow: 0 0 15px var(--terminal-green);
+}
+
+/* Feedback Messages */
+.feedback-message {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: 6px;
+  margin: 10px 0;
+  font-size: 13px;
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.feedback-success {
+  background: rgba(63, 185, 80, 0.1);
+  border: 1px solid rgba(63, 185, 80, 0.3);
+  color: #3fb950;
+}
+
+.feedback-error {
+  background: rgba(248, 81, 73, 0.1);
+  border: 1px solid rgba(248, 81, 73, 0.3);
+  color: #f85149;
+}
+
+.feedback-info {
+  background: rgba(88, 166, 255, 0.1);
+  border: 1px solid rgba(88, 166, 255, 0.3);
+  color: var(--terminal-green);
+}
+
+.feedback-warning {
+  background: rgba(210, 153, 34, 0.1);
+  border: 1px solid rgba(210, 153, 34, 0.3);
+  color: var(--terminal-yellow);
+}
+
+/* Empty State Styling */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  text-align: center;
+  background: rgba(88, 166, 255, 0.05);
+  border: 2px dashed var(--border-color);
+  border-radius: 8px;
+  color: var(--server-text);
+}
+
+.empty-state-icon {
+  font-size: 48px;
+  margin-bottom: 15px;
+  opacity: 0.5;
+}
+
+.empty-state-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--guide-text);
+  margin: 0 0 10px 0;
+}
+
+.empty-state-message {
+  font-size: 13px;
+  color: var(--server-text);
+  margin: 0 0 20px 0;
+  max-width: 300px;
+}
+
+.empty-state-action {
+  padding: 8px 16px;
+  background: var(--terminal-green);
+  color: #000;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.empty-state-action:hover {
+  background: #44dd44;
+  box-shadow: 0 0 10px var(--terminal-green);
+}
+
+/* Improved Typography */
+.heading-primary {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--terminal-text);
+  margin: 0 0 20px 0;
+  letter-spacing: -0.5px;
+}
+
+.heading-secondary {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--terminal-text);
+  margin: 0 0 15px 0;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 10px;
+}
+
+.heading-tertiary {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--terminal-green);
+  margin: 0 0 12px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.text-body {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--guide-text);
+}
+
+.text-secondary {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--server-text);
+}
+
+.text-mono {
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  color: var(--terminal-text);
+}
+
+/* ===================================
+   Accessibility & Scrollbar
+   =================================== */
+
+/* Accessibility Improvements */
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--terminal-green);
+  outline-offset: 2px;
+}
+
+/* Focus Management for Keyboard Navigation */
+.keyboard-focus-visible:focus {
+  outline: 2px solid var(--terminal-green);
+  outline-offset: 2px;
+}
+
+/* Improved Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #484f58;
+}
+
+/* Custom Scrollbar for panel content */
+.panel-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.panel-content::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.panel-content::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 4px;
+}
+
+.panel-content::-webkit-scrollbar-thumb:hover {
+  background: #484f58;
+}
