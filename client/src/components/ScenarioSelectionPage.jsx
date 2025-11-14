@@ -1,11 +1,11 @@
 import { scenarioMap } from '../data/scenarios/index.js';
-import { CheckCircle2, Circle, Swords, Lock } from 'lucide-react';
+import { CheckCircle2, Circle, Swords, Lock, ChevronRight } from 'lucide-react';
 import { Link } from 'wouter';
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from "@/components/ui/tooltip"; // We need this for locked scenarios
+} from "@/components/ui/tooltip"; // Import the Tooltip components
 
 // This defines the logical attack chain.
 // To unlock a scenario (key), the user must have completed the prerequisite (value).
@@ -13,6 +13,7 @@ const scenarioPrerequisites = {
   'asrep-roasting': 'nmap-recon',
   'password-spraying': 'nmap-recon',
   'llmnr-poisoning': 'nmap-recon',
+  'bruteforce-lockout': 'nmap-recon', // <-- ADD THIS (Also requires nmap)
   'kerberoasting': 'asrep-roasting', // This path still works
   'bloodhound': 'kerberoasting',
   'pass-the-hash': 'bloodhound',
@@ -21,7 +22,8 @@ const scenarioPrerequisites = {
 };
 
 // --- Helper Component to Render a Single Scenario Card ---
-// This avoids duplicating code and keeps the main component clean
+// (This component is unchanged, so I'm omitting it for brevity)
+// ...
 function RenderScenarioCard({ scenario, allScenarios, progress, onScenarioSelect }) {
   if (!scenario) return null;
 
@@ -110,7 +112,7 @@ export default function ScenarioSelectionPage({ allScenarios, progress, customSc
   // This array defines the structure of your new UI
   const campaignTiers = [
     { title: "Phase 1: Reconnaissance", scenarios: ['nmap-recon'] },
-    { title: "Phase 2: Initial Access", scenarios: ['asrep-roasting', 'password-spraying', 'llmnr-poisoning'] },
+    { title: "Phase 2: Initial Access", scenarios: ['asrep-roasting', 'password-spraying', 'llmnr-poisoning', 'bruteforce-lockout'] }, // <-- ADDED 'bruteforce-lockout'
     { title: "Phase 3: Escalation", scenarios: ['kerberoasting', 'bloodhound'] },
     { title: "Phase 4: Lateral Movement", scenarios: ['pass-the-hash'] },
     { title: "Phase 5: Domain Dominance", scenarios: ['dcsync'] },
@@ -158,7 +160,7 @@ export default function ScenarioSelectionPage({ allScenarios, progress, customSc
         {/* --- END CAMPAIGN PATH UI --- */}
 
 
-        {/* --- CUSTOM SCENARIOS (Now uses the grid) --- */}
+        {/* --- CUSTOM SCENARIOS (Still in a grid) --- */}
         {customScenariosList.length > 0 && (
           <div className="scenarios-section">
             <h2 className="section-title">Custom Scenarios</h2>

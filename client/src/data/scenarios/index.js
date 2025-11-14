@@ -10,11 +10,12 @@ import nmapScenario from './nmap.js'; // Mission 0
 import passwordSprayScenario from './passwordspray.js';
 import llmnrScenario from './llmnr.js';
 import asrepScenario from './asrep.js'; // Mission 1A
+import bruteforceScenario from './bruteforce.js'; // <-- ADD THIS IMPORT
 import kerberoastScenario from './kerberoast.js'; // Mission 2
 import bloodhoundScenario from './bloodhound.js'; // Mission 3
 import pthScenario from './pth.js'; // Mission 4
 import dcsyncScenario from './dcsync.js'; // Mission 5
-import goldenTicketScenario from './goldenticket.js'; // <-- ADD THIS IMPORT
+import goldenTicketScenario from './goldenticket.js';
 
 // Array of all scenarios in the order they should appear in the UI
 export const scenarios = [
@@ -22,11 +23,12 @@ export const scenarios = [
   asrepScenario,
   passwordSprayScenario,
   llmnrScenario,
+  bruteforceScenario, // <-- ADD THIS
   kerberoastScenario,
   bloodhoundScenario,
   pthScenario,
   dcsyncScenario,
-  goldenTicketScenario // <-- ADD THIS
+  goldenTicketScenario
 ];
 
 // Map scenario IDs to scenario objects for quick lookup
@@ -35,11 +37,12 @@ export const scenarioMap = {
   'asrep-roasting': asrepScenario,
   'password-spraying': passwordSprayScenario,
   'llmnr-poisoning': llmnrScenario,
+  'bruteforce-lockout': bruteforceScenario, // <-- ADD THIS
   'kerberoasting': kerberoastScenario,
   'bloodhound': bloodhoundScenario,
   'pass-the-hash': pthScenario,
   'dcsync': dcsyncScenario,
-  'golden-ticket': goldenTicketScenario // <-- ADD THIS
+  'golden-ticket': goldenTicketScenario
 };
 
 export default scenarios;
