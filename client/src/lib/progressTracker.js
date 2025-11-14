@@ -1,209 +1,343 @@
-/**
- * Progress Tracker
- * 
- * Manages player progress, scoring, and localStorage persistence
- */
+// client/src/lib/progressTracker.js
 
-const STORAGE_KEY = 'ad-attack-simulator-progress';
+const STORAGE_KEY = 'ad-simulator-progress';
+const MAX_SCORE = 10000;
+const VERSION = 2; // Increment when schema changes
 
 // Rank thresholds
-export const RANK_THRESHOLDS = {
-  'Script Kiddie': { min: 0, max: 30 },
-  'Junior Red Teamer': { min: 31, max: 70 },
-  'Operator': { min: 71, max: Infinity }
+const RANK_THRESHOLDS = [
+  { minScore: 0, rank: 'Novice' },
+  { minScore: 50, rank: 'Script Kiddie' },
+  { minScore: 150, rank: 'Junior Red Teamer' },
+  { minScore: 300, rank: 'Red Team Operator' },
+  { minScore: 500, rank: 'Elite Hacker' },
+  { minScore: 800, rank: 'Cyber Ninja' }
+];
+
+/**
+ * Get default progress object
+ */
+export const getDefaultProgress = () => ({
+  version: VERSION,
+  totalScore: 0,
+  rank: 'Novice',
+  scenariosCompleted: [],
+  scenarioStats: {},
+  quizScores: {},
+  unlockedAchievements: [],
+  tutorialMode: true,
+  createdAt: Date.now(),
+  updatedAt: Date.now()
+});
+
+/**
+ * Migrate old progress format to new version
+ */
+const migrateProgress = (oldProgress) => {
+  if (!oldProgress || oldProgress.version === VERSION) {
+    return oldProgress;
+  }
+  
+  console.log(`Migrating progress from v${oldProgress.version || 1} to v${VERSION}`);
+  
+  // Add migration logic here when schema changes
+  const migrated = {
+    ...getDefaultProgress(),
+    ...oldProgress,
+    version: VERSION,
+    updatedAt: Date.now()
+  };
+  
+  return migrated;
 };
 
 /**
- * Get the rank based on total score
- * @param {number} score - Total score
- * @returns {string} Rank name
+ * Validate progress object structure
  */
-export function getRankFromScore(score) {
-  for (const [rank, threshold] of Object.entries(RANK_THRESHOLDS)) {
-    if (score >= threshold.min && score <= threshold.max) {
-      return rank;
-    }
-  }
-  return 'Script Kiddie';
-}
+const validateProgress = (progress) => {
+  if (!progress || typeof progress !== 'object') return false;
+  
+  const required = ['totalScore', 'rank', 'scenariosCompleted', 'unlockedAchievements'];
+  return required.every(key => key in progress);
+};
 
 /**
- * Initialize default progress object
- * @returns {Object} Default progress structure
+ * Load progress from localStorage with error handling
  */
-export function getDefaultProgress() {
-  return {
-    totalScore: 0,
-    rank: 'Script Kiddie',
-    scenariosCompleted: [],
-    scenarioStats: [],
-    quizScores: [],
-    unlockedAchievements: [],
-    tutorialMode: false,
-    lastUpdated: new Date().toISOString()
-  };
-}
-
-/**
- * Load progress from localStorage
- * @returns {Object} Player progress
- */
-export function loadProgress() {
+export const loadProgress = () => {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      return JSON.parse(stored);
+    
+    if (!stored) {
+      return getDefaultProgress();
     }
+    
+    const parsed = JSON.parse(stored);
+    
+    if (!validateProgress(parsed)) {
+      console.warn('Invalid progress structure, resetting...');
+      return getDefaultProgress();
+    }
+    
+    return migrateProgress(parsed);
   } catch (error) {
-    console.error('Error loading progress:', error);
+    console.error('Failed to load progress:', error);
+    return getDefaultProgress();
   }
-  return getDefaultProgress();
-}
+};
 
 /**
- * Save progress to localStorage
- * @param {Object} progress - Progress object to save
+ * Save progress to localStorage with error handling
  */
-export function saveProgress(progress) {
+export const saveProgress = (progress) => {
   try {
-    progress.lastUpdated = new Date().toISOString();
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
+    if (!validateProgress(progress)) {
+      throw new Error('Invalid progress object');
+    }
+    
+    const toSave = {
+      ...progress,
+      updatedAt: Date.now()
+    };
+    
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
+    return true;
   } catch (error) {
-    console.error('Error saving progress:', error);
+    if (error.name === 'QuotaExceededError') {
+      console.error('LocalStorage quota exceeded');
+      alert('Storage is full. Please clear some data.');
+    } else {
+      console.error('Failed to save progress:', error);
+    }
+    return false;
   }
-}
+};
 
 /**
- * Calculate score for a scenario completion
- * @param {number} wrongAttempts - Number of wrong command attempts
- * @param {number} hintsUsed - Number of hints used
- * @returns {number} Points earned
+ * Clear all progress (with confirmation)
  */
-export function calculateScenarioScore(wrongAttempts, hintsUsed) {
+export const clearProgress = () => {
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+    return getDefaultProgress();
+  } catch (error) {
+    console.error('Failed to clear progress:', error);
+    return null;
+  }
+};
+
+/**
+ * Calculate rank based on total score
+ */
+export const calculateRank = (totalScore) => {
+  // Find highest rank threshold that score meets
+  for (let i = RANK_THRESHOLDS.length - 1; i >= 0; i--) {
+    if (totalScore >= RANK_THRESHOLDS[i].minScore) {
+      return RANK_THRESHOLDS[i].rank;
+    }
+  }
+  
+  return 'Novice';
+};
+
+/**
+ * Add scenario completion with duplicate prevention
+ */
+export const addScenarioCompletion = (progress, scenarioId, stats) => {
+  const updatedProgress = { ...progress };
+  
+  // Prevent duplicate completions
+  if (!updatedProgress.scenariosCompleted.includes(scenarioId)) {
+    updatedProgress.scenariosCompleted = [...updatedProgress.scenariosCompleted, scenarioId];
+  }
+  
+  // Calculate score for this completion
+  const score = calculateScenarioScore(stats.wrongAttempts || 0, stats.hintsUsed || 0);
+  
+  // Update stats for this scenario
+  updatedProgress.scenarioStats[scenarioId] = {
+    ...(updatedProgress.scenarioStats[scenarioId] || {}),
+    lastCompleted: Date.now(),
+    attempts: (updatedProgress.scenarioStats[scenarioId]?.attempts || 0) + 1,
+    bestScore: Math.max(updatedProgress.scenarioStats[scenarioId]?.bestScore || 0, score),
+    lastScore: score,
+    wrongAttempts: stats.wrongAttempts || 0,
+    hintsUsed: stats.hintsUsed || 0,
+    timeSpent: stats.timeSpent || 0
+  };
+  
+  // Update total score (with max limit)
+  updatedProgress.totalScore = Math.min(
+    updatedProgress.totalScore + score,
+    MAX_SCORE
+  );
+  
+  // Recalculate rank
+  updatedProgress.rank = calculateRank(updatedProgress.totalScore);
+  
+  return updatedProgress;
+};
+
+/**
+ * Calculate scenario score based on performance
+ */
+const calculateScenarioScore = (wrongAttempts, hintsUsed) => {
   if (wrongAttempts === 0 && hintsUsed === 0) {
-    return 10; // Perfect: +10 points
+    return 10; // Perfect score
   } else if (hintsUsed > 0 && hintsUsed <= 2) {
-    return 5; // With hints: +5 points
+    return 5; // Used hints
   } else if (wrongAttempts > 0) {
-    return Math.max(0, 10 - (wrongAttempts * 2)); // Deduct for wrong attempts
+    return Math.max(0, 10 - (wrongAttempts * 2)); // Penalty for mistakes
   }
   return 0;
-}
+};
 
 /**
- * Add scenario completion to progress
- * @param {Object} progress - Current progress
- * @param {string} scenarioId - Scenario ID
- * @param {Object} stats - Scenario statistics
- * @returns {Object} Updated progress
+ * Add quiz score
  */
-export function addScenarioCompletion(progress, scenarioId, stats) {
-  // Mark scenario as completed
-  if (!progress.scenariosCompleted.includes(scenarioId)) {
-    progress.scenariosCompleted.push(scenarioId);
-  }
-
-  // Add/update scenario stats
-  const existingIndex = progress.scenarioStats.findIndex(s => s.scenarioId === scenarioId);
-  const scenarioScore = calculateScenarioScore(stats.wrongAttempts, stats.hintsUsed);
+export const addQuizScore = (progress, scenarioId, score, correctAnswers, totalQuestions) => {
+  const updatedProgress = { ...progress };
   
-  const scenarioData = {
-    scenarioId,
-    completed: true,
-    score: scenarioScore,
-    wrongAttempts: stats.wrongAttempts,
-    hintsUsed: stats.hintsUsed,
-    timeSpent: stats.timeSpent || 0,
-    completedAt: new Date().toISOString()
-  };
-
-  if (existingIndex >= 0) {
-    progress.scenarioStats[existingIndex] = scenarioData;
-  } else {
-    progress.scenarioStats.push(scenarioData);
-  }
-
-  // Update total score and rank
-  progress.totalScore = progress.scenarioStats.reduce((sum, s) => sum + (s.score || 0), 0);
-  progress.rank = getRankFromScore(progress.totalScore);
-
-  return progress;
-}
-
-/**
- * Add quiz score to progress
- * @param {Object} progress - Current progress
- * @param {string} scenarioId - Scenario ID
- * @param {number} score - Quiz score (0-100)
- * @param {number} correctAnswers - Number of correct answers
- * @param {number} totalQuestions - Total questions in quiz
- * @returns {Object} Updated progress
- */
-export function addQuizScore(progress, scenarioId, score, correctAnswers, totalQuestions) {
-  const quizData = {
-    scenarioId,
+  // Store quiz result
+  updatedProgress.quizScores[scenarioId] = {
     score,
     correctAnswers,
     totalQuestions,
-    completedAt: new Date().toISOString()
+    percentage: Math.round((correctAnswers / totalQuestions) * 100),
+    completedAt: Date.now()
   };
+  
+  // Add bonus score (with max limit)
+  updatedProgress.totalScore = Math.min(
+    updatedProgress.totalScore + score,
+    MAX_SCORE
+  );
+  
+  // Recalculate rank
+  updatedProgress.rank = calculateRank(updatedProgress.totalScore);
+  
+  return updatedProgress;
+};
 
-  // Check if quiz for this scenario already exists
-  const existingIndex = progress.quizScores.findIndex(q => q.scenarioId === scenarioId);
-  if (existingIndex >= 0) {
-    progress.quizScores[existingIndex] = quizData;
-  } else {
-    progress.quizScores.push(quizData);
+/**
+ * Unlock achievement with duplicate prevention
+ */
+export const unlockAchievement = (progress, achievementId) => {
+  const updatedProgress = { ...progress };
+  
+  // Prevent duplicate unlocks
+  if (!updatedProgress.unlockedAchievements.includes(achievementId)) {
+    updatedProgress.unlockedAchievements = [
+      ...updatedProgress.unlockedAchievements,
+      achievementId
+    ];
   }
+  
+  return updatedProgress;
+};
 
-  // Add bonus points for perfect quiz (5 points per correct answer)
-  if (score === 100) {
-    progress.totalScore += 5;
-    progress.rank = getRankFromScore(progress.totalScore);
+/**
+ * Get progress statistics
+ */
+export const getProgressStats = (progress) => {
+  const totalScenarios = 17; // Update this when adding scenarios
+  
+  return {
+    completionPercentage: Math.round((progress.scenariosCompleted.length / totalScenarios) * 100),
+    totalScenarios: progress.scenariosCompleted.length,
+    totalScore: progress.totalScore,
+    rank: progress.rank,
+    achievements: progress.unlockedAchievements.length,
+    quizzesCompleted: Object.keys(progress.quizScores).length,
+    averageQuizScore: calculateAverageQuizScore(progress),
+    totalTimeSpent: calculateTotalTimeSpent(progress),
+    bestScenario: findBestScenario(progress)
+  };
+};
+
+/**
+ * Calculate average quiz score
+ */
+const calculateAverageQuizScore = (progress) => {
+  const scores = Object.values(progress.quizScores);
+  if (scores.length === 0) return 0;
+  
+  const sum = scores.reduce((acc, quiz) => acc + (quiz.percentage || 0), 0);
+  return Math.round(sum / scores.length);
+};
+
+/**
+ * Calculate total time spent
+ */
+const calculateTotalTimeSpent = (progress) => {
+  const times = Object.values(progress.scenarioStats)
+    .map(stat => stat.timeSpent || 0)
+    .filter(t => typeof t === 'number');
+  
+  return times.reduce((acc, time) => acc + time, 0);
+};
+
+/**
+ * Find best performing scenario
+ */
+const findBestScenario = (progress) => {
+  const stats = Object.entries(progress.scenarioStats);
+  if (stats.length === 0) return null;
+  
+  const best = stats.reduce((best, [id, stat]) => {
+    if (!best || (stat.bestScore || 0) > (best.score || 0)) {
+      return { id, score: stat.bestScore };
+    }
+    return best;
+  }, null);
+  
+  return best;
+};
+
+/**
+ * Export progress as JSON
+ */
+export const exportProgress = (progress) => {
+  try {
+    const exportData = {
+      ...progress,
+      exportedAt: Date.now(),
+      exportVersion: VERSION
+    };
+    
+    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `ad-simulator-progress-${Date.now()}.json`;
+    a.click();
+    
+    URL.revokeObjectURL(url);
+    return true;
+  } catch (error) {
+    console.error('Failed to export progress:', error);
+    return false;
   }
-
-  return progress;
-}
+};
 
 /**
- * Unlock an achievement
- * @param {Object} progress - Current progress
- * @param {string} achievementId - Achievement ID
- * @returns {Object} Updated progress
+ * Import progress from JSON
  */
-export function unlockAchievement(progress, achievementId) {
-  if (!progress.unlockedAchievements.includes(achievementId)) {
-    progress.unlockedAchievements.push(achievementId);
+export const importProgress = (jsonString) => {
+  try {
+    const imported = JSON.parse(jsonString);
+    
+    if (!validateProgress(imported)) {
+      throw new Error('Invalid progress format');
+    }
+    
+    const migrated = migrateProgress(imported);
+    saveProgress(migrated);
+    
+    return migrated;
+  } catch (error) {
+    console.error('Failed to import progress:', error);
+    throw error;
   }
-  return progress;
-}
-
-/**
- * Reset all progress
- * @returns {Object} Default progress
- */
-export function resetProgress() {
-  const defaultProgress = getDefaultProgress();
-  saveProgress(defaultProgress);
-  return defaultProgress;
-}
-
-/**
- * Get scenario statistics
- * @param {Object} progress - Current progress
- * @param {string} scenarioId - Scenario ID
- * @returns {Object|null} Scenario stats or null
- */
-export function getScenarioStats(progress, scenarioId) {
-  return progress.scenarioStats.find(s => s.scenarioId === scenarioId) || null;
-}
-
-/**
- * Get quiz score for scenario
- * @param {Object} progress - Current progress
- * @param {string} scenarioId - Scenario ID
- * @returns {Object|null} Quiz score or null
- */
-export function getQuizScore(progress, scenarioId) {
-  return progress.quizScores.find(q => q.scenarioId === scenarioId) || null;
-}
+};
