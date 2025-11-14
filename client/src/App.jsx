@@ -1,11 +1,11 @@
 // client/src/App.jsx
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react'; // <-- ADD THIS LINE
 import { Route, Switch, Redirect } from 'wouter';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 import SimulatorPage from './components/SimulatorPage';
 import ScenarioEditor from './components/ScenarioEditor';
-import HomePage from './components/HomePage';
+import HomePage from './components/HomePage'; // <-- Make sure this line exists too
 import { scenarios, scenarioMap } from './data/scenarios/index.js';
 import { loadProgress, saveProgress } from './lib/progressTracker.js';
 import { checkStorageHealth } from './lib/safeStorage.js';
