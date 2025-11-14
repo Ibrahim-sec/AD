@@ -1,129 +1,312 @@
+// client/src/lib/safeStorage.js
+
 /**
- * Safe localStorage helpers with error handling and fallbacks
+ * Safe localStorage wrapper with error handling and quota management
+ * Handles all edge cases: disabled storage, quota exceeded, JSON errors
  */
 
-const STORAGE_PREFIX = 'ad-trainer-';
+const QUOTA_WARNING_THRESHOLD = 0.8; // Warn at 80% usage
+
+/**
+ * Check if localStorage is available
+ */
+const isStorageAvailable = () => {
+  try {
+    const test = '__storage_test__';
+    localStorage.setItem(test, test);
+    localStorage.removeItem(test);
+    return true;
+  } catch (e) {
+    return false;
+  }
+};
+
+/**
+ * Get localStorage usage percentage (0-1)
+ */
+export const getStorageUsage = () => {
+  if (!isStorageAvailable()) return 0;
+  
+  try {
+    let total = 0;
+    for (let key in localStorage) {
+      if (localStorage.hasOwnProperty(key)) {
+        total += localStorage[key].length + key.length;
+      }
+    }
+    
+    // Estimate quota (usually 5-10MB, we'll use 5MB as conservative estimate)
+    const estimatedQuota = 5 * 1024 * 1024;
+    return total / estimatedQuota;
+  } catch (e) {
+    return 0;
+  }
+};
+
+/**
+ * Check if we're approaching storage quota
+ */
+export const isApproachingQuota = () => {
+  return getStorageUsage() > QUOTA_WARNING_THRESHOLD;
+};
 
 /**
  * Safely get item from localStorage
- * @param {string} key - Storage key
- * @param {*} defaultValue - Default value if key doesn't exist or parsing fails
- * @returns {*} Parsed value or default
  */
-export function safeGetItem(key, defaultValue = null) {
+export const safeGetItem = (key, defaultValue = null) => {
+  if (!isStorageAvailable()) {
+    console.warn('localStorage is not available');
+    return defaultValue;
+  }
+  
   try {
-    const fullKey = `${STORAGE_PREFIX}${key}`;
-    const item = localStorage.getItem(fullKey);
+    const item = localStorage.getItem(key);
     
     if (item === null) {
       return defaultValue;
     }
     
+    // Try to parse as JSON, fallback to raw string
     try {
       return JSON.parse(item);
     } catch (parseError) {
-      console.warn(`Failed to parse localStorage key "${key}":`, parseError);
-      return defaultValue;
+      // Not JSON, return as string
+      return item;
     }
   } catch (error) {
-    console.warn(`Failed to read from localStorage:`, error);
+    console.error(`Error reading from localStorage (${key}):`, error);
     return defaultValue;
   }
-}
+};
 
 /**
  * Safely set item in localStorage
- * @param {string} key - Storage key
- * @param {*} value - Value to store (will be JSON stringified)
- * @returns {boolean} Success status
  */
-export function safeSetItem(key, value) {
-  try {
-    const fullKey = `${STORAGE_PREFIX}${key}`;
-    localStorage.setItem(fullKey, JSON.stringify(value));
-    return true;
-  } catch (error) {
-    console.error(`Failed to write to localStorage key "${key}":`, error);
+export const safeSetItem = (key, value) => {
+  if (!isStorageAvailable()) {
+    console.warn('localStorage is not available');
     return false;
   }
-}
+  
+  try {
+    // Warn if approaching quota
+    if (isApproachingQuota()) {
+      console.warn('localStorage is approaching quota limit');
+    }
+    
+    // Serialize value if it's an object
+    const serialized = typeof value === 'string' ? value : JSON.stringify(value);
+    
+    localStorage.setItem(key, serialized);
+    return true;
+  } catch (error) {
+    if (error.name === 'QuotaExceededError') {
+      console.error('localStorage quota exceeded');
+      
+      // Try to free up space by removing old data
+      const success = cleanupOldData(key);
+      
+      if (success) {
+        try {
+          const serialized = typeof value === 'string' ? value : JSON.stringify(value);
+          localStorage.setItem(key, serialized);
+          return true;
+        } catch (retryError) {
+          console.error('Failed to save even after cleanup:', retryError);
+          return false;
+        }
+      }
+      
+      return false;
+    }
+    
+    console.error(`Error writing to localStorage (${key}):`, error);
+    return false;
+  }
+};
 
 /**
  * Safely remove item from localStorage
- * @param {string} key - Storage key
- * @returns {boolean} Success status
  */
-export function safeRemoveItem(key) {
-  try {
-    const fullKey = `${STORAGE_PREFIX}${key}`;
-    localStorage.removeItem(fullKey);
-    return true;
-  } catch (error) {
-    console.error(`Failed to remove from localStorage key "${key}":`, error);
+export const safeRemoveItem = (key) => {
+  if (!isStorageAvailable()) {
     return false;
   }
-}
-
-/**
- * Safely clear all app-prefixed items from localStorage
- * @returns {boolean} Success status
- */
-export function safeClearAll() {
+  
   try {
-    const keysToRemove = [];
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key && key.startsWith(STORAGE_PREFIX)) {
-        keysToRemove.push(key);
-      }
-    }
-    keysToRemove.forEach(key => localStorage.removeItem(key));
+    localStorage.removeItem(key);
     return true;
   } catch (error) {
-    console.error('Failed to clear localStorage:', error);
+    console.error(`Error removing from localStorage (${key}):`, error);
     return false;
   }
-}
+};
 
 /**
- * Get all app-prefixed items from localStorage
- * @returns {Object} All stored items
+ * Safely clear all localStorage
  */
-export function safeGetAll() {
+export const safeClearAll = () => {
+  if (!isStorageAvailable()) {
+    return false;
+  }
+  
   try {
-    const items = {};
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key && key.startsWith(STORAGE_PREFIX)) {
-        const cleanKey = key.replace(STORAGE_PREFIX, '');
-        items[cleanKey] = safeGetItem(cleanKey);
+    localStorage.clear();
+    return true;
+  } catch (error) {
+    console.error('Error clearing localStorage:', error);
+    return false;
+  }
+};
+
+/**
+ * Get all keys in localStorage
+ */
+export const getAllKeys = () => {
+  if (!isStorageAvailable()) {
+    return [];
+  }
+  
+  try {
+    return Object.keys(localStorage);
+  } catch (error) {
+    console.error('Error getting localStorage keys:', error);
+    return [];
+  }
+};
+
+/**
+ * Get storage size in bytes
+ */
+export const getStorageSize = () => {
+  if (!isStorageAvailable()) {
+    return 0;
+  }
+  
+  try {
+    let total = 0;
+    for (let key in localStorage) {
+      if (localStorage.hasOwnProperty(key)) {
+        total += localStorage[key].length + key.length;
       }
     }
-    return items;
+    return total;
   } catch (error) {
-    console.error('Failed to read all items from localStorage:', error);
-    return {};
+    return 0;
   }
-}
+};
 
 /**
- * Migrate old localStorage keys to new prefixed format
- * @param {Array<string>} oldKeys - Old key names to migrate
+ * Cleanup old data to free up space
  */
-export function migrateLegacyStorage(oldKeys = []) {
+const cleanupOldData = (priorityKey) => {
+  console.log('Attempting to free up localStorage space...');
+  
   try {
-    oldKeys.forEach(oldKey => {
-      try {
-        const value = localStorage.getItem(oldKey);
-        if (value !== null) {
-          safeSetItem(oldKey, JSON.parse(value));
-          localStorage.removeItem(oldKey);
+    // Get all keys except the priority key
+    const keys = Object.keys(localStorage).filter(k => k !== priorityKey);
+    
+    // Remove items with timestamps, starting with oldest
+    const itemsWithTimestamps = keys
+      .map(key => {
+        try {
+          const value = JSON.parse(localStorage.getItem(key));
+          const timestamp = value?.updatedAt || value?.createdAt || 0;
+          return { key, timestamp };
+        } catch {
+          return { key, timestamp: 0 };
         }
-      } catch (error) {
-        console.warn(`Failed to migrate key "${oldKey}":`, error);
-      }
-    });
+      })
+      .sort((a, b) => a.timestamp - b.timestamp);
+    
+    // Remove oldest 25% of items
+    const toRemove = Math.ceil(itemsWithTimestamps.length * 0.25);
+    
+    for (let i = 0; i < toRemove; i++) {
+      localStorage.removeItem(itemsWithTimestamps[i].key);
+    }
+    
+    console.log(`Removed ${toRemove} old items from localStorage`);
+    return true;
   } catch (error) {
-    console.error('Failed to migrate legacy storage:', error);
+    console.error('Failed to cleanup localStorage:', error);
+    return false;
   }
-}
+};
+
+/**
+ * Export all localStorage data
+ */
+export const exportAllData = () => {
+  if (!isStorageAvailable()) {
+    return null;
+  }
+  
+  try {
+    const data = {};
+    for (let key in localStorage) {
+      if (localStorage.hasOwnProperty(key)) {
+        try {
+          data[key] = JSON.parse(localStorage[key]);
+        } catch {
+          data[key] = localStorage[key];
+        }
+      }
+    }
+    return data;
+  } catch (error) {
+    console.error('Error exporting localStorage data:', error);
+    return null;
+  }
+};
+
+/**
+ * Import data to localStorage
+ */
+export const importAllData = (data) => {
+  if (!isStorageAvailable() || !data) {
+    return false;
+  }
+  
+  try {
+    for (let key in data) {
+      safeSetItem(key, data[key]);
+    }
+    return true;
+  } catch (error) {
+    console.error('Error importing localStorage data:', error);
+    return false;
+  }
+};
+
+/**
+ * Check storage health
+ */
+export const checkStorageHealth = () => {
+  const available = isStorageAvailable();
+  const usage = getStorageUsage();
+  const size = getStorageSize();
+  const approaching = isApproachingQuota();
+  
+  return {
+    available,
+    usage,
+    size,
+    approaching,
+    sizeFormatted: formatBytes(size),
+    status: !available ? 'unavailable' : approaching ? 'warning' : 'healthy'
+  };
+};
+
+/**
+ * Format bytes to human readable
+ */
+const formatBytes = (bytes) => {
+  if (bytes === 0) return '0 Bytes';
+  
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  
+  return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
+};

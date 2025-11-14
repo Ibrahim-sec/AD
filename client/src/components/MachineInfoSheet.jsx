@@ -1,87 +1,95 @@
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
-import { Server, Shield, User, CheckCircle2, XCircle } from "lucide-react";
+// client/src/components/MachineInfoSheet.jsx - CREATE THIS
 
-// This map defines the static data for each node
-const machineDetailsMap = {
-  attacker: {
-    title: 'Attacker Machine',
-    role: 'Red Team Machine',
-    icon: <User size={48} className="text-accent-color" />,
-    baseIp: '10.0.0.5',
-    baseHostname: 'kali-attacker',
-  },
-  target: {
-    title: 'Internal Server',
-    role: 'File / Application Server',
-    icon: <Server size={48} className="text-accent-color" />,
-    baseIp: '10.0.1.10',
-    baseHostname: 'SRV-APP01.contoso.local',
-  },
-  dc: {
-    title: 'Domain Controller',
-    role: 'Authentication & Certificate Server',
-    icon: <Shield size={48} className="text-accent-color" />,
-    baseIp: '10.0.1.10',
-    baseHostname: 'DC01.contoso.local',
-  }
-};
+import { X, Server, Shield, Activity } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
-export default function MachineInfoSheet({ nodeName, network, compromisedNodes, isOpen, onClose }) {
-  if (!nodeName || !machineDetailsMap[nodeName]) {
-    return null;
-  }
-
-  const details = machineDetailsMap[nodeName];
-  const isCompromised = compromisedNodes.includes(nodeName);
-
-  // Use dynamic network info if available, otherwise fall back to base
-  const ip = (nodeName === 'attacker' ? network.attacker?.ip : (nodeName === 'target' ? network.target?.ip : network.dc?.ip)) || details.baseIp;
-  const hostname = (nodeName === 'attacker' ? network.attacker?.hostname : (nodeName === 'target' ? network.target?.hostname : network.dc?.hostname)) || details.baseHostname;
-
+export default function MachineInfoSheet({ machine, onClose }) {
+  if (!machine) return null;
 
   return (
-    <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent className="sheet-content-override">
-        <SheetHeader>
-          <div className="sheet-icon">{details.icon}</div>
-          <SheetTitle className="sheet-title-override">{details.title}</SheetTitle>
-          <SheetDescription className="sheet-description-override">
-            {details.role}
-          </SheetDescription>
-        </SheetHeader>
-        <div className="sheet-body">
-          <div className="info-group">
-            <h4 className="info-title">Network Identity</h4>
-            <div className="info-item">
-              <span>Hostname</span>
-              <code>{hostname}</code>
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm"
+        onClick={onClose}
+      >
+        <motion.div
+          initial={{ x: '100%' }}
+          animate={{ x: 0 }}
+          exit={{ x: '100%' }}
+          transition={{ type: 'spring', damping: 20 }}
+          onClick={(e) => e.stopPropagation()}
+          className="absolute right-0 top-0 h-full w-96 bg-[#101214] border-l border-white/10 shadow-2xl overflow-y-auto"
+        >
+          {/* Header */}
+          <div className="flex items-center justify-between p-6 border-b border-white/10">
+            <div className="flex items-center gap-3">
+              {machine.type === 'attacker' && <Activity className="w-6 h-6 text-[#2D9CDB]" />}
+              {machine.type === 'target' && <Server className="w-6 h-6 text-red-400" />}
+              {machine.type === 'dc' && <Shield className="w-6 h-6 text-purple-400" />}
+              <div>
+                <h3 className="text-lg font-bold text-white">{machine.label}</h3>
+                <p className="text-xs text-white/60">{machine.ip}</p>
+              </div>
             </div>
-            <div className="info-item">
-              <span>IP Address</span>
-              <code>{ip}</code>
-            </div>
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-white/5 rounded-lg transition-colors"
+            >
+              <X className="w-5 h-5 text-white/60" />
+            </button>
           </div>
-          
-          <div className="info-group">
-            <h4 className="info-title">Status</h4>
-            <div className="info-item status">
-              <span>Compromised</span>
-              {isCompromised ? (
-                <code className="status-compromised">
-                  <CheckCircle2 size={16} /> YES
-                </code>
-              ) : (
-                <code className="status-safe">
-                  <XCircle size={16} /> NO
-                </code>
-              )}
+
+          {/* Details */}
+          <div className="p-6 space-y-6">
+            {/* OS Info */}
+            <div>
+              <h4 className="text-sm font-semibold text-white/80 mb-2">Operating System</h4>
+              <p className="text-sm text-white/60">{machine.details?.os || 'Unknown'}</p>
             </div>
+
+            {/* Role */}
+            <div>
+              <h4 className="text-sm font-semibold text-white/80 mb-2">Role</h4>
+              <p className="text-sm text-white/60">{machine.details?.role || 'Unknown'}</p>
+            </div>
+
+            {/* Services */}
+            {machine.details?.services && (
+              <div>
+                <h4 className="text-sm font-semibold text-white/80 mb-2">Running Services</h4>
+                <div className="space-y-1">
+                  {machine.details.services.map((service, idx) => (
+                    <div key={idx} className="text-sm text-white/60 flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-green-400"></span>
+                      {service}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Tools */}
+            {machine.details?.tools && (
+              <div>
+                <h4 className="text-sm font-semibold text-white/80 mb-2">Installed Tools</h4>
+                <div className="flex flex-wrap gap-2">
+                  {machine.details.tools.map((tool, idx) => (
+                    <span
+                      key={idx}
+                      className="px-2 py-1 bg-[#2D9CDB]/20 text-[#2D9CDB] text-xs rounded border border-[#2D9CDB]/30"
+                    >
+                      {tool}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
-          
-          {/* We could add a "Loot Found" section here in the future */}
-          
-        </div>
-      </SheetContent>
-    </Sheet>
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
   );
 }
