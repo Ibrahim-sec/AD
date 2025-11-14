@@ -5,16 +5,19 @@ import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from "@/components/ui/tooltip"; // We need this for locked scenarios
+} from "@/components/ui/tooltip"; // Import the Tooltip components
 
 // This defines the logical attack chain.
 // To unlock a scenario (key), the user must have completed the prerequisite (value).
 const scenarioPrerequisites = {
   'asrep-roasting': 'nmap-recon',
-  'kerberoasting': 'asrep-roasting',
+  'password-spraying': 'nmap-recon', // <-- ADD THIS (Also requires nmap)
+  'kerberoasting': 'asrep-roasting', // This path still works
   'bloodhound': 'kerberoasting',
   'pass-the-hash': 'bloodhound',
   'dcsync': 'pass-the-hash',
+  // You can add your new "Golden Ticket" scenario here later
+  // 'golden-ticket': 'dcsync', 
 };
 
 // --- Helper Component to Render a Single Scenario Card ---
@@ -139,7 +142,14 @@ export default function ScenarioSelectionPage({ allScenarios, progress, customSc
                 progress={progress}
                 onScenarioSelect={onScenarioSelect}
               />
-              {/* You could add "LLMNR Poisoning" here later and it would unlock automatically */}
+              {/* --- ADD THE NEW SCENARIO CARD HERE --- */}
+              <RenderScenarioCard
+                scenario={allScenarios['password-spraying']}
+                allScenarios={allScenarios}
+                progress={progress}
+                onScenarioSelect={onScenarioSelect}
+              />
+              {/* -------------------------------------- */}
             </div>
             
             <div className="campaign-connector">
