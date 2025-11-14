@@ -47,6 +47,8 @@ export default function SimulatorPage({
   allScenarios,
   progress,
   setProgress,
+  appMode, 
+  setAppMode,
 }) {
   const currentScenario = allScenarios[scenarioId];
 
@@ -141,27 +143,27 @@ export default function SimulatorPage({
     setHighlightedArrow(null);
     
     setAttackerHistory([
-      { type: 'system', text: `Welcome to ${currentScenario.machines.attacker.name}` },
-      { type: 'system', text: `IP: ${currentScenario.machines.attacker.ip}` },
-      { type: 'system', text: `Target: ${currentScenario.machines.internal.name} (${currentScenario.machines.internal.ip})` },
+      { type: 'system', text: `Welcome to ${currentScenario.network.attacker.hostname}` },
+      { type: 'system', text: `IP: ${currentScenario.network.attacker.ip}` },
+      { type: 'system', text: `Target: ${currentScenario.network.target.hostname} (${currentScenario.network.target.ip})` },
       { type: 'system', text: '' },
       { type: 'system', text: 'Type the commands from the guide to begin the attack simulation.' },
       { type: 'system', text: '' }
     ]);
     
     setServerHistory([
-      { type: 'info', text: `[SYSTEM] ${currentScenario.machines.internal.name} - Windows Server 2019` },
-      { type: 'info', text: `[SYSTEM] Domain Controller for ${currentScenario.machines.dc.name}` },
-      { type: 'info', text: `[SYSTEM] IP Address: ${currentScenario.machines.internal.ip}` },
+      { type: 'info', text: `[SYSTEM] ${currentScenario.network.target.hostname} - Windows Server 2019` },
+      { type: 'info', text: `[SYSTEM] Domain Controller for ${currentScenario.network.domain}` },
+      { type: 'info', text: `[SYSTEM] IP Address: ${currentScenario.network.target.ip}` },
       { type: 'info', text: '[SYSTEM] All services running normally' },
       { type: 'info', text: '' }
     ]);
     
-	    setDefenseHistory([
-	        { type: 'info', text: `[DEFENSE] Blue Team Console Online. Monitoring Domain: ${currentScenario.machines.dc.name}` },
-	        { type: 'info', text: "[DEFENSE] Active Policy: Strong Password Policy, NTLM Enabled (Legacy Support)" },
-	        { type: 'info', text: "" },
-	    ]);
+    setDefenseHistory([
+        { type: 'info', text: "[DEFENSE] Blue Team Console Online. Monitoring Domain: contoso.local" },
+        { type: 'info', text: "[DEFENSE] Active Policy: Strong Password Policy, NTLM Enabled (Legacy Support)" },
+        { type: 'info', text: "" },
+    ]);
   };
   
   // --- CORE SIMULATION LOGIC ---
@@ -262,7 +264,7 @@ export default function SimulatorPage({
   const handleCommandSubmit = (command) => {
     setAttackerHistory(prev => [
       ...prev,
-      { type: 'command', text: `root@${currentScenario.machines.attacker.name}:~# ${command}` }
+      { type: 'command', text: `root@${currentScenario.network.attacker.hostname}:~# ${command}` }
     ]);
 
     const currentScenarioStep = currentScenario.steps[currentStep];
