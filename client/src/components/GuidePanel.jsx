@@ -28,7 +28,8 @@ export default function GuidePanel({
   onTutorialToggle,
   highlightedMachine,
   highlightedArrow,
-  onShowBriefing // MODIFICATION 2: Accept the new prop
+  onShowBriefing, // MODIFICATION 2: Accept the new prop
+  network // This prop is now used by NetworkMap
 }) {
   const { guide } = scenario;
   const currentGuideStep = guide.steps[currentStep];
@@ -76,6 +77,7 @@ export default function GuidePanel({
                     <NetworkMap 
                         highlightedMachine={highlightedMachine}
                         highlightedArrow={highlightedArrow}
+                        network={network} {/* Pass the network prop here */}
                     />
                 </div>
             </CollapsibleContent>
