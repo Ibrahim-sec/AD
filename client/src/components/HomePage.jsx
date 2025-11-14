@@ -363,111 +363,46 @@ function StatCard({ icon, label, value }) {
 function ScenarioCard({ scenario, isCompleted }) {
   const getDifficultyColor = (difficulty) => {
     switch (difficulty) {
-      case 'Beginner': return { bg: 'rgba(34, 197, 94, 0.2)', text: '#22c55e', border: 'rgba(34, 197, 94, 0.3)' };
-      case 'Intermediate': return { bg: 'rgba(234, 179, 8, 0.2)', text: '#eab308', border: 'rgba(234, 179, 8, 0.3)' };
-      case 'Advanced': return { bg: 'rgba(239, 68, 68, 0.2)', text: '#ef4444', border: 'rgba(239, 68, 68, 0.3)' };
-      case 'Expert': return { bg: 'rgba(168, 85, 247, 0.2)', text: '#a855f7', border: 'rgba(168, 85, 247, 0.3)' };
-      default: return { bg: 'rgba(156, 163, 175, 0.2)', text: '#9ca3af', border: 'rgba(156, 163, 175, 0.3)' };
+      case 'Beginner': return 'bg-green-500/20 text-green-400 border-green-500/30';
+      case 'Intermediate': return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
+      case 'Advanced': return 'bg-red-500/20 text-red-400 border-red-500/30';
+      case 'Expert': return 'bg-purple-500/20 text-purple-400 border-purple-500/30';
+      default: return 'bg-gray-500/20 text-gray-400 border-gray-500/30';
     }
   };
 
-  const colors = getDifficultyColor(scenario.difficulty);
-
   return (
-    <Link href={`/scenario/${scenario.id}`}>
-      <a style={{ textDecoration: 'none', display: 'block' }}>
-        <div style={{
-          position: 'relative',
-          background: '#1a1d24',
-          borderRadius: '12px',
-          padding: '16px',
-          border: '1px solid rgba(255,255,255,0.1)',
-          cursor: 'pointer',
-          transition: 'all 0.2s',
-          height: '100%'
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.background = '#1f2229';
-          e.currentTarget.style.borderColor = 'rgba(45, 156, 219, 0.5)';
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.background = '#1a1d24';
-          e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)';
-        }}>
-          {isCompleted && (
-            <div style={{
-              position: 'absolute',
-              top: '12px',
-              right: '12px',
-              width: '24px',
-              height: '24px',
-              background: '#22c55e',
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
-              <CheckCircle style={{ width: '16px', height: '16px', color: 'white' }} />
+    <motion.div whileHover={{ scale: 1.02, y: -2 }}>
+      <Link href={`/scenario/${scenario.id}`}>
+        {/* Remove the <a> tag wrapper - Link already handles navigation */}
+        <div className="block group cursor-pointer">
+          <div className="relative bg-[#1a1d24] hover:bg-[#1f2229] rounded-lg p-4 border border-white/10 hover:border-[#2D9CDB]/50 transition-all h-full">
+            {isCompleted && (
+              <div className="absolute top-2 right-2 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
+                <CheckCircle className="w-4 h-4 text-white" />
+              </div>
+            )}
+            <div className="flex items-start gap-2 mb-2">
+              <div className="w-8 h-8 rounded-lg bg-[#2D9CDB]/20 flex items-center justify-center flex-shrink-0">
+                <Target className="w-4 h-4 text-[#2D9CDB]" />
+              </div>
+              <h3 className="text-sm font-bold line-clamp-2 group-hover:text-[#2D9CDB] transition-colors leading-tight">
+                {scenario.title}
+              </h3>
             </div>
-          )}
-          <div style={{ display: 'flex', alignItems: 'start', gap: '8px', marginBottom: '8px' }}>
-            <div style={{
-              width: '32px',
-              height: '32px',
-              borderRadius: '8px',
-              background: 'rgba(45, 156, 219, 0.2)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0
-            }}>
-              <Target style={{ width: '16px', height: '16px', color: '#2D9CDB' }} />
-            </div>
-            <h3 style={{
-              fontSize: '14px',
-              fontWeight: 'bold',
-              color: 'white',
-              margin: 0,
-              lineHeight: '1.4',
-              display: '-webkit-box',
-              WebkitLineClamp: 2,
-              WebkitBoxOrient: 'vertical',
-              overflow: 'hidden'
-            }}>
-              {scenario.title}
-            </h3>
-          </div>
-          <p style={{
-            fontSize: '11px',
-            color: 'rgba(255,255,255,0.6)',
-            lineHeight: '1.5',
-            marginBottom: '12px',
-            display: '-webkit-box',
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: 'vertical',
-            overflow: 'hidden'
-          }}>
-            {scenario.description}
-          </p>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{
-              padding: '4px 8px',
-              borderRadius: '4px',
-              fontSize: '10px',
-              fontWeight: '600',
-              background: colors.bg,
-              color: colors.text,
-              border: `1px solid ${colors.border}`
-            }}>
-              {scenario.difficulty}
-            </span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', color: 'rgba(255,255,255,0.4)' }}>
-              <Clock style={{ width: '12px', height: '12px' }} />
-              <span>Steps: {scenario.steps?.length || 0}</span>
+            <p className="text-[11px] text-white/60 mb-3 line-clamp-2 leading-relaxed">{scenario.description}</p>
+            <div className="flex items-center justify-between">
+              <span className={`px-2 py-0.5 rounded text-[10px] font-semibold border ${getDifficultyColor(scenario.difficulty)}`}>
+                {scenario.difficulty}
+              </span>
+              <div className="flex items-center gap-1 text-[10px] text-white/40">
+                <Clock className="w-3 h-3" />
+                <span>Steps: {scenario.steps?.length || 0}</span>
+              </div>
             </div>
           </div>
         </div>
-      </a>
-    </Link>
+      </Link>
+    </motion.div>
   );
 }
