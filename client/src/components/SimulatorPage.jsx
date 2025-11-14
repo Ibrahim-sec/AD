@@ -275,14 +275,14 @@ export default function SimulatorPage({
   };
 
   const handleCommandSubmit = (command) => {
+    // Always echo the command in the attacker terminal for realism
     setAttackerHistory(prev => [
       ...prev,
       { type: 'command', text: `root@${currentScenario.network.attacker.hostname}:~# ${command}` }
     ]);
 
-    const currentScenarioStep = currentScenario.steps[currentStep];
-    
-    if (!currentScenarioStep) {
+    const step = currentScenario.steps[currentStep];
+    if (!step) {
       setAttackerHistory(prev => [
         ...prev,
         { type: 'error', text: '[!] Simulation complete. Select a new scenario to restart.' }
@@ -290,35 +290,70 @@ export default function SimulatorPage({
       return;
     }
 
-    const expectedCmd = currentScenarioStep.expectedCommand;
-    const normalizedInput = command.trim().toLowerCase();
-    const normalizedExpected = expectedCmd ? expectedCmd.trim().toLowerCase() : null;
+    // Support an array of acceptable commands (expectedCommands) as well as the legacy expectedCommand string
+    const expectedList = Array.isArray(step.expectedCommands) && step.expectedCommands.length > 0
+      ? step.expectedCommands
+      : step.expectedCommand
+        ? [step.expectedCommand]
+        : [];
 
-    if (normalizedExpected && normalizedInput !== normalizedExpected) {
+    const normalizedInput = command.trim().toLowerCase();
+    const isMatch = expectedList.some(cmd => {
+      if (!cmd) return false;
+      return normalizedInput === cmd.trim().toLowerCase();
+    });
+
+    // If the input does not match any expected command, handle mistakes and hints
+    if (!isMatch) {
+      // Increment wrong attempt count
       setScenarioStats(prev => ({ ...prev, wrongAttempts: prev.wrongAttempts + 1 }));
-      
-      if (tutorialMode) {
-        // Tutorial mode does not relax the command requirements; it still expects
-        // the exact correct command. This branch only provides an additional hint
-        // when the user enters an incorrect command.
-        const step = currentScenario.steps[currentStep];
-        setAttackerHistory(prev => [
-          ...prev,
-          { type: 'error', text: `[!] Not quite right. Hint: ${step.hintShort || 'Try again'}` }
-        ]);
-      } else {
-        const suggestion = `Did you mean: ${expectedCmd}?`;
-        setAttackerHistory(prev => [
-          ...prev,
-          { type: 'error', text: `[!] Command not recognized or incorrect for this step.` },
-          { type: 'error', text: `[!] ${suggestion}` }
-        ]);
+
+      // Check if this incorrect input matches any known common mistakes defined in the scenario step
+      const mistakes = Array.isArray(step.commonMistakes) ? step.commonMistakes : [];
+      let handledMistake = false;
+      for (const mistake of mistakes) {
+        if (!mistake || !mistake.pattern) continue;
+        try {
+          const regex = new RegExp(mistake.pattern, 'i');
+          if (regex.test(command)) {
+            handledMistake = true;
+            setAttackerHistory(prev => [
+              ...prev,
+              { type: 'error', text: `[!] ${mistake.message}` }
+            ]);
+            break;
+          }
+        } catch (err) {
+          // If pattern is invalid, ignore gracefully
+        }
+      }
+
+      // If not handled by a specific mistake, fall back to tutorial hints or generic suggestion
+      if (!handledMistake) {
+        if (tutorialMode) {
+          // Tutorial mode does not relax the command requirements; it still expects
+          // an exact match. This branch provides an additional hint when the user enters
+          // an incorrect command.
+          setAttackerHistory(prev => [
+            ...prev,
+            { type: 'error', text: `[!] Not quite right. Hint: ${step.hintShort || 'Try again'}` }
+          ]);
+        } else {
+          // Show a generic error and suggest the first expected command as guidance
+          const suggestion = expectedList.length > 0 ? `Did you mean: ${expectedList[0]}?` : '';
+          setAttackerHistory(prev => [
+            ...prev,
+            { type: 'error', text: `[!] Command not recognized or incorrect for this step.` },
+            ...(suggestion ? [{ type: 'error', text: `[!] ${suggestion}` }] : [])
+          ]);
+        }
       }
       return;
     }
 
+    // If we reach here, the command was correct; proceed to process the step
     setIsProcessing(true);
-    processStepOutput(currentScenarioStep);
+    processStepOutput(step);
   };
   
   const handleShowHint = (stepIndex) => {
