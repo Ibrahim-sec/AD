@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react'; // ADDED useState/useEffect
-import { BookOpen, Lightbulb, Terminal, ChevronDown, Network } from 'lucide-react';
+import { useState, useEffect } from 'react';
+// MODIFICATION 1: Add 'Target' icon
+import { BookOpen, Lightbulb, Terminal, ChevronDown, Network, Target } from 'lucide-react'; 
 import { Streamdown } from 'streamdown';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import NetworkMap from './NetworkMap';
@@ -26,7 +27,8 @@ export default function GuidePanel({
   tutorialMode = false, 
   onTutorialToggle,
   highlightedMachine,
-  highlightedArrow
+  highlightedArrow,
+  onShowBriefing // MODIFICATION 2: Accept the new prop
 }) {
   const { guide } = scenario;
   const currentGuideStep = guide.steps[currentStep];
@@ -90,22 +92,37 @@ export default function GuidePanel({
                     <BookOpen size={20} />
                     <h2 className="!text-sm !font-medium flex-1">Attack Guide</h2>
                     
-                    {/* Tutorial Toggle */}
-                    {onTutorialToggle && (
-                        <button 
-                            className={`tutorial-toggle absolute right-10 ${tutorialMode ? 'active' : ''}`}
-                            onClick={onTutorialToggle}
-                            title="Toggle tutorial mode for hints and forgiving command matching"
-                        >
-                            <span>Tutorial</span>
-                            <div className="toggle-switch">
-                                <div className="toggle-dot"></div>
-                            </div>
-                        </button>
-                    )}
+                    {/* MODIFICATION 3: Add a container for the buttons */}
+                    {/* This div groups the new Briefing button and the Tutorial toggle */}
+                    <div className="flex items-center gap-2 absolute right-10"> 
+                        {/* New Briefing Button */}
+                        {onShowBriefing && (
+                          <button 
+                              className="tutorial-toggle" // Reuse tutorial-toggle style
+                              onClick={onShowBriefing}
+                              title="Show Mission Briefing"
+                          >
+                              <Target size={16} />
+                          </button>
+                        )}
+
+                        {/* Tutorial Toggle */}
+                        {onTutorialToggle && (
+                            <button 
+                                className={`tutorial-toggle ${tutorialMode ? 'active' : ''}`}
+                                onClick={onTutorialToggle}
+                                title="Toggle tutorial mode for hints and forgiving command matching"
+                            >
+                                <span>Tutorial</span>
+                                <div className="toggle-switch">
+                                    <div className="toggle-dot"></div>
+                                </div>
+                            </button>
+                        )}
+                    </div>
                     
                     <CollapsibleTrigger asChild>
-                        <button title="Toggle Guide Visibility" className="text-server-text hover:text-accent-color transition">
+                        <button title="Toggle Guide Visibility" className="text-server-text hover:text-accent-color transition ml-auto">
                             <ChevronDown size={20} className="collapsible-icon" />
                         </button>
                     </CollapsibleTrigger>
