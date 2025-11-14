@@ -11,7 +11,7 @@
   /* --- NEW "SLATE & VIOLET" THEME --- */
   
   /* Base Backgrounds (Deep Slate) */
-  --background: #020617; /* Slate 950 (Body BG) */
+  --background: #020617; /* Slate 950 (Body BG)*/
   --terminal-bg: #0f172a; /* Slate 900 (Terminal Panel/Darkest Elements) */
   --guide-bg: #1e293b;   /* Slate 800 (Guide Panel/Raised Surfaces) */
   --server-bg: #0f172a; /* Slate 900 (Logs Panel) */
