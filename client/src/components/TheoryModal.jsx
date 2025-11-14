@@ -1,4 +1,4 @@
-// client/src/components/TheoryModal.jsx
+// client/src/components/TheoryModal.jsx - FIXED VERSION
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -11,9 +11,7 @@ import {
   AlertTriangle,
   Info,
   Shield,
-  Target,
   Clock,
-  Award,
   ExternalLink,
   Code,
   Lightbulb
@@ -39,8 +37,8 @@ export default function TheoryModal({ isOpen, onClose, module, onComplete }) {
 
   if (!module) return null;
 
-  const totalSections = module.sections.length;
-  const progress = Math.round((completedSections.size / totalSections) * 100);
+  const totalSections = module.sections?.length || 0;
+  const progress = totalSections > 0 ? Math.round((completedSections.size / totalSections) * 100) : 0;
 
   const handleNext = () => {
     setCompletedSections(prev => new Set(prev).add(currentSection));
@@ -63,7 +61,6 @@ export default function TheoryModal({ isOpen, onClose, module, onComplete }) {
   const handleQuizSubmit = () => {
     setQuizSubmitted(true);
     
-    // Check if all answers are correct
     const allCorrect = module.quiz.every((q, idx) => quizAnswers[idx] === q.correct);
     
     if (allCorrect && onComplete) {
@@ -149,7 +146,7 @@ export default function TheoryModal({ isOpen, onClose, module, onComplete }) {
                   submitted={quizSubmitted}
                 />
               ) : (
-                <SectionContent section={currentContent} />
+                <SectionContent section={currentContent} moduleData={module} />
               )}
             </div>
 
@@ -194,8 +191,11 @@ export default function TheoryModal({ isOpen, onClose, module, onComplete }) {
   );
 }
 
-// Section Content Component
-function SectionContent({ section }) {
+// ============================================================================
+// SECTION CONTENT COMPONENT - FIXED
+// ============================================================================
+
+function SectionContent({ section, moduleData }) {
   if (!section) return null;
 
   return (
@@ -206,7 +206,7 @@ function SectionContent({ section }) {
       </div>
 
       {/* Key Points */}
-      {section.keyPoints && (
+      {section.keyPoints && section.keyPoints.length > 0 && (
         <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
           <div className="flex items-center gap-2 mb-3">
             <Lightbulb className="w-5 h-5 text-blue-400" />
@@ -230,14 +230,14 @@ function SectionContent({ section }) {
             <Code className="w-4 h-4 text-[#2D9CDB]" />
             <span className="text-sm font-semibold text-white">{section.example.title}</span>
           </div>
-          <pre className="p-4 text-sm text-green-400 font-mono overflow-x-auto">
+          <pre className="p-4 text-sm text-green-400 font-mono overflow-x-auto whitespace-pre-wrap">
             {section.example.code}
           </pre>
         </div>
       )}
 
       {/* Steps */}
-      {section.steps && (
+      {section.steps && section.steps.length > 0 && (
         <div className="space-y-4">
           {section.steps.map((step, idx) => (
             <div key={idx} className="flex gap-4">
@@ -247,8 +247,8 @@ function SectionContent({ section }) {
               <div className="flex-1">
                 <h5 className="font-semibold text-white mb-1">{step.title}</h5>
                 <p className="text-sm text-white/60 mb-2">{step.description}</p>
-                {step.commands && (
-                  <div className="bg-[#0a0b0d] border border-white/10 rounded p-2">
+                {step.commands && step.commands.length > 0 && (
+                  <div className="bg-[#0a0b0d] border border-white/10 rounded p-2 space-y-1">
                     {step.commands.map((cmd, cmdIdx) => (
                       <code key={cmdIdx} className="text-xs text-green-400 font-mono block">
                         {cmd}
@@ -263,7 +263,7 @@ function SectionContent({ section }) {
       )}
 
       {/* Defense Section */}
-      {section.type === 'defense' && section.detection && (
+      {section.type === 'defensive' && section.detection && (
         <div className="space-y-4">
           <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-4">
             <div className="flex items-center gap-2 mb-3">
@@ -274,35 +274,45 @@ function SectionContent({ section }) {
               {section.detection.logs?.map((log, idx) => (
                 <div key={idx} className="text-sm text-yellow-300/80">• {log}</div>
               ))}
-            </div>
-          </div>
-
-          <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <Shield className="w-5 h-5 text-green-400" />
-              <h4 className="font-semibold text-green-400">Prevention Strategies</h4>
-            </div>
-            <div className="space-y-3">
-              {section.prevention?.map((prev, idx) => (
-                <div key={idx}>
-                  <div className="font-semibold text-sm text-green-300">{prev.title}</div>
-                  <div className="text-xs text-green-300/70 mt-1">{prev.description}</div>
-                </div>
+              {section.detection.indicators?.map((indicator, idx) => (
+                <div key={idx} className="text-sm text-yellow-300/80">• {indicator}</div>
               ))}
             </div>
           </div>
+
+          {section.prevention && section.prevention.length > 0 && (
+            <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Shield className="w-5 h-5 text-green-400" />
+                <h4 className="font-semibold text-green-400">Prevention Strategies</h4>
+              </div>
+              <div className="space-y-3">
+                {section.prevention.map((prev, idx) => (
+                  <div key={idx}>
+                    <div className="font-semibold text-sm text-green-300">{prev.title}</div>
+                    <div className="text-xs text-green-300/70 mt-1">{prev.description}</div>
+                    {prev.example && (
+                      <code className="text-xs text-green-400 mt-1 block bg-black/30 p-2 rounded">
+                        {prev.example}
+                      </code>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
-      {/* Resources */}
-      {section.id === module.sections[module.sections.length - 1].id && module.resources && (
+      {/* Resources - Show on last section */}
+      {section.id === moduleData.sections[moduleData.sections.length - 1].id && moduleData.resources && (
         <div className="bg-white/5 border border-white/10 rounded-lg p-4">
           <h4 className="font-semibold text-white mb-3 flex items-center gap-2">
             <ExternalLink className="w-4 h-4" />
             Additional Resources
           </h4>
           <div className="space-y-2">
-            {module.resources.map((resource, idx) => (
+            {moduleData.resources.map((resource, idx) => (
               <a
                 key={idx}
                 href={resource.url}
@@ -320,7 +330,10 @@ function SectionContent({ section }) {
   );
 }
 
-// Quiz Section Component
+// ============================================================================
+// QUIZ SECTION COMPONENT
+// ============================================================================
+
 function QuizSection({ quiz, answers, setAnswers, submitted }) {
   const score = submitted ? quiz.filter((q, idx) => answers[idx] === q.correct).length : 0;
   const percentage = submitted ? Math.round((score / quiz.length) * 100) : 0;
