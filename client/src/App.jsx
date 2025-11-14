@@ -1,169 +1,310 @@
-import { useState } from 'react';
-import { Toaster } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { ThemeProvider } from "./contexts/ThemeContext";
-import ErrorBoundary from "./components/ErrorBoundary.tsx";
-// Use wouter for routing
-import { Router, Route, Switch, Redirect } from 'wouter'; 
+// client/src/App.jsx
 
-// New Page Components
-import ScenarioSelectionPage from './components/ScenarioSelectionPage';
+import { useState, useEffect } from 'react';
+import { Route, Switch, Redirect } from 'wouter';
+import { AlertTriangle, RefreshCw } from 'lucide-react';
 import SimulatorPage from './components/SimulatorPage';
 import ScenarioEditor from './components/ScenarioEditor';
-import ScenarioList from './components/ScenarioList';
+import HomePage from './components/HomePage';
+import { scenarios, scenarioMap } from './data/scenarios/index.js';
+import { loadProgress, saveProgress } from './lib/progressTracker.js';
+import { checkStorageHealth } from './lib/safeStorage.js';
+import './index.css';
 
-// Utilities and Data
-import { scenarioMap } from './data/scenarios/index.js';
-import { getCustomScenarios } from './utils/scenarioStorage.js';
-import { loadProgress } from './lib/progressTracker.js';
-import { safeSetItem } from './lib/safeStorage.js';
-import './styles.css';
+// ============================================================================
+// ERROR BOUNDARY COMPONENT
+// ============================================================================
 
-// Migrate legacy storage (Keep this outside the component)
-const legacyKeys = ['playerProgress', 'customScenarios', 'achievements'];
-legacyKeys.forEach(key => {
-  const oldValue = localStorage.getItem(key);
-  if (oldValue) {
-    try {
-      safeSetItem(key, JSON.parse(oldValue));
-      localStorage.removeItem(key);
-    } catch (e) {
-      console.warn(`Could not migrate legacy key: ${key}`);
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { 
+      hasError: false, 
+      error: null,
+      errorInfo: null 
+    };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error('Application Error:', error, errorInfo);
+    this.setState({ error, errorInfo });
+    
+    // Log to error tracking service if available
+    if (window.trackError) {
+      window.trackError(error, errorInfo);
     }
   }
-});
 
-function SimulatorApp() {
-  // Global State (persists across routes)
-  const [appMode, setAppMode] = useState('play');
-  const [showEditor, setShowEditor] = useState(false);
-  const [editingScenario, setEditingScenario] = useState(null);
-  const [customScenarios, setCustomScenarios] = useState(() => getCustomScenarios());
-  const [progress, setProgress] = useState(() => loadProgress());
-
-  // Consolidate scenario map for all components
-  const allScenarios = { ...scenarioMap };
-  customScenarios.forEach(scenario => {
-    allScenarios[scenario.id] = scenario;
-  });
-
-  // Function to pass to selection page, triggers navigation
-  const handleScenarioSelect = (scenario) => {
-    if (import.meta.env.DEV) {
-      console.log('[DEBUG] Scenario selected:', scenario.id);
-    }
-    // Navigation is handled by the <Link> component in ScenarioSelectionPage
+  handleReset = () => {
+    this.setState({ hasError: false, error: null, errorInfo: null });
   };
 
-  // Handle editor close actions
-  const handleEditorClose = () => {
-    setShowEditor(false);
-    setEditingScenario(null);
-    setCustomScenarios(getCustomScenarios());
-  };
-
-  // Handle scenario edit (used in ScenarioList)
-  const handleEditScenario = (scenario) => {
-    setEditingScenario(scenario);
-    setShowEditor(true);
-  };
-  
-  // Handle scenario delete (used in ScenarioList)
-  const handleDeleteScenario = () => {
-    setCustomScenarios(getCustomScenarios());
-  };
-
-  // Editor View (Renders the Scenario Editor and Custom Scenario List)
-  const EditorView = () => (
-    <div className="editor-mode-container">
-      <div className="mode-toggle">
-        <button onClick={() => setAppMode('play')} className="mode-btn">Play Scenarios</button>
-        <button onClick={() => setAppMode('editor')} className="mode-btn active">Scenario Editor</button>
-      </div>
-      {showEditor ? (
-        <ScenarioEditor onClose={handleEditorClose} initialScenario={editingScenario} />
-      ) : (
-        <div className="editor-home">
-          <h2>Scenario Editor</h2>
-          <div className="editor-actions">
-            <button onClick={() => { setEditingScenario(null); setShowEditor(true); }} className="btn-primary">Create New Scenario</button>
-          </div>
-          <ScenarioList 
-            scenarios={customScenarios} 
-            title="Custom Scenarios" 
-            onSelect={() => { /* no-op in editor home */ }} 
-            onEdit={handleEditScenario} 
-            onDelete={handleDeleteScenario} 
-          />
-        </div>
-      )}
-    </div>
-  );
-
-  // Main App Content (Router Switch)
-  return (
-    <div className="simulator-container">
-      {/* Mode Toggle remains visible on all primary routes */}
-      <div className="mode-toggle-bar">
-        <button onClick={() => setAppMode('play')} className={appMode === 'play' ? 'mode-btn active' : 'mode-btn'}>Play Scenarios</button>
-        <button onClick={() => setAppMode('editor')} className={appMode === 'editor' ? 'mode-btn active' : 'mode-btn'}>Scenario Editor</button>
-      </div>
-      
-      {appMode === 'editor' ? (
-        <EditorView />
-      ) : (
-        <Router>
-          <Switch>
-            {/* Route 1: Scenario Selector Page (Home) */}
-            <Route path="/">
-              <div className="main-layout main-home-layout">
-                <div className="main-content">
-                  <ScenarioSelectionPage 
-                    allScenarios={allScenarios} 
-                    progress={progress}
-                    customScenarios={customScenarios}
-                    onScenarioSelect={handleScenarioSelect}
-                  />
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen bg-[#0a0b0d] flex items-center justify-center p-4">
+          <div className="max-w-md w-full bg-[#101214] border border-white/10 rounded-xl p-8 text-center">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-500/20 flex items-center justify-center">
+              <AlertTriangle className="w-8 h-8 text-red-500" />
+            </div>
+            
+            <h2 className="text-2xl font-bold text-white mb-2">
+              Something Went Wrong
+            </h2>
+            
+            <p className="text-white/60 text-sm mb-6">
+              The application encountered an unexpected error. 
+              Your progress has been saved.
+            </p>
+            
+            {this.props.showDetails && this.state.error && (
+              <div className="bg-black/50 rounded-lg p-4 mb-6 text-left">
+                <div className="text-xs font-mono text-red-400 mb-2">
+                  {this.state.error.toString()}
                 </div>
+                {this.state.errorInfo && (
+                  <div className="text-xs font-mono text-white/40 overflow-auto max-h-32">
+                    {this.state.errorInfo.componentStack}
+                  </div>
+                )}
               </div>
-            </Route>
+            )}
+            
+            <div className="flex gap-3">
+              <button
+                onClick={this.handleReset}
+                className="flex-1 px-4 py-3 bg-[#2D9CDB] hover:bg-[#2D9CDB]/80 text-white font-semibold rounded-lg transition-all flex items-center justify-center gap-2"
+              >
+                <RefreshCw className="w-4 h-4" />
+                Try Again
+              </button>
+              
+              <button
+                onClick={() => window.location.href = '/'}
+                className="flex-1 px-4 py-3 bg-white/5 hover:bg-white/10 text-white font-semibold rounded-lg transition-all"
+              >
+                Go Home
+              </button>
+            </div>
+            
+            <button
+              onClick={() => window.location.reload()}
+              className="mt-3 w-full text-xs text-white/40 hover:text-white/60 transition-colors"
+            >
+              Force Reload Page
+            </button>
+          </div>
+        </div>
+      );
+    }
 
-            {/* Route 2: Simulator Page */}
-            <Route path="/scenario/:id">
-              {({ id }) => (
-                <SimulatorPage 
-                  scenarioId={id}
-                  allScenarios={allScenarios}
+    return this.props.children;
+  }
+}
+
+// ============================================================================
+// MAIN APP COMPONENT
+// ============================================================================
+
+export default function App() {
+  const [progress, setProgress] = useState(null);
+  const [appMode, setAppMode] = useState('simulator'); // 'simulator' or 'editor'
+  const [isLoading, setIsLoading] = useState(true);
+  const [storageWarning, setStorageWarning] = useState(null);
+
+  // ========== INITIALIZE APP ==========
+  
+  useEffect(() => {
+    initializeApp();
+  }, []);
+
+  const initializeApp = async () => {
+    try {
+      // Check storage health
+      const health = checkStorageHealth();
+      
+      if (!health.available) {
+        setStorageWarning({
+          type: 'error',
+          message: 'localStorage is not available. Progress will not be saved.'
+        });
+      } else if (health.approaching) {
+        setStorageWarning({
+          type: 'warning',
+          message: `Storage is ${Math.round(health.usage * 100)}% full. Consider clearing old data.`
+        });
+      }
+
+      // Load progress
+      const loadedProgress = loadProgress();
+      setProgress(loadedProgress);
+      
+      // Small delay for smooth loading
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      setIsLoading(false);
+    } catch (error) {
+      console.error('Failed to initialize app:', error);
+      
+      // Fallback to default progress
+      const defaultProgress = {
+        totalScore: 0,
+        rank: 'Novice',
+        scenariosCompleted: [],
+        scenarioStats: {},
+        quizScores: {},
+        unlockedAchievements: [],
+        tutorialMode: true
+      };
+      
+      setProgress(defaultProgress);
+      setIsLoading(false);
+    }
+  };
+
+  // ========== HANDLE PROGRESS UPDATE ==========
+  
+  const handleProgressUpdate = (newProgress) => {
+    setProgress(newProgress);
+    saveProgress(newProgress);
+  };
+
+  // ========== LOADING STATE ==========
+  
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#0a0b0d] flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[#2D9CDB]/20 flex items-center justify-center animate-pulse">
+            <div className="w-8 h-8 border-4 border-[#2D9CDB] border-t-transparent rounded-full animate-spin"></div>
+          </div>
+          <p className="text-white/60 text-sm">Loading AD Attack Simulator...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // ========== NO PROGRESS STATE ==========
+  
+  if (!progress) {
+    return (
+      <div className="min-h-screen bg-[#0a0b0d] flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-[#101214] border border-white/10 rounded-xl p-8 text-center">
+          <AlertTriangle className="w-16 h-16 mx-auto mb-4 text-red-500" />
+          <h2 className="text-2xl font-bold text-white mb-2">
+            Failed to Load Progress
+          </h2>
+          <p className="text-white/60 text-sm mb-6">
+            Unable to initialize the application. Please refresh the page.
+          </p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-6 py-3 bg-[#2D9CDB] hover:bg-[#2D9CDB]/80 text-white font-semibold rounded-lg transition-all"
+          >
+            Reload Application
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ========== RENDER APP ==========
+  
+  return (
+    <ErrorBoundary showDetails={process.env.NODE_ENV === 'development'}>
+      <div className="app-container">
+        {/* Storage Warning Banner */}
+        {storageWarning && (
+          <div className={`fixed top-0 left-0 right-0 z-50 px-4 py-3 text-center text-sm ${
+            storageWarning.type === 'error' 
+              ? 'bg-red-500/20 text-red-400 border-b border-red-500/30'
+              : 'bg-yellow-500/20 text-yellow-400 border-b border-yellow-500/30'
+          }`}>
+            <span>{storageWarning.message}</span>
+            <button
+              onClick={() => setStorageWarning(null)}
+              className="ml-4 underline hover:no-underline"
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
+
+        {/* Main Content */}
+        <Switch>
+          {/* Home Page */}
+          <Route path="/">
+            <HomePage 
+              scenarios={scenarios}
+              progress={progress}
+              appMode={appMode}
+              setAppMode={setAppMode}
+            />
+          </Route>
+
+          {/* Scenario Routes */}
+          <Route path="/scenario/:scenarioId">
+            {(params) => {
+              const scenario = scenarioMap[params.scenarioId];
+              
+              if (!scenario) {
+                return <NotFound />;
+              }
+
+              return (
+                <SimulatorPage
+                  scenarioId={params.scenarioId}
+                  allScenarios={scenarioMap}
                   progress={progress}
-                  setProgress={setProgress}
+                  setProgress={handleProgressUpdate}
                   appMode={appMode}
                   setAppMode={setAppMode}
                 />
-              )}
-            </Route>
+              );
+            }}
+          </Route>
 
-            {/* Fallback */}
-            <Route>
-              <Redirect to="/" />
-            </Route>
-          </Switch>
-        </Router>
-      )}
-    </div>
-  );
-}
+          {/* Scenario Editor */}
+          <Route path="/editor">
+            <ScenarioEditor />
+          </Route>
 
-function App() {
-  return (
-    <ErrorBoundary>
-      <ThemeProvider defaultTheme="dark">
-        <TooltipProvider>
-          <Toaster />
-          <SimulatorApp />
-        </TooltipProvider>
-      </ThemeProvider>
+          {/* 404 Not Found */}
+          <Route>
+            <NotFound />
+          </Route>
+        </Switch>
+      </div>
     </ErrorBoundary>
   );
 }
 
-export default App;
+// ============================================================================
+// 404 NOT FOUND COMPONENT
+// ============================================================================
+
+function NotFound() {
+  return (
+    <div className="min-h-screen bg-[#0a0b0d] flex items-center justify-center p-4">
+      <div className="max-w-md w-full bg-[#101214] border border-white/10 rounded-xl p-8 text-center">
+        <div className="text-6xl mb-4">🔍</div>
+        <h2 className="text-2xl font-bold text-white mb-2">
+          Page Not Found
+        </h2>
+        <p className="text-white/60 text-sm mb-6">
+          The page you're looking for doesn't exist or has been moved.
+        </p>
+        <a
+          href="/"
+          className="inline-block px-6 py-3 bg-[#2D9CDB] hover:bg-[#2D9CDB]/80 text-white font-semibold rounded-lg transition-all"
+        >
+          Return Home
+        </a>
+      </div>
+    </div>
+  );
+}
