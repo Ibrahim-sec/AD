@@ -33,7 +33,8 @@ export const llmnrScenario = {
 2.  Wait for a user to make a typo (e.g., \`\\FILESVRO\`).
 3.  Responder lies and tells the user's PC that it is 'FILESVRO'.
 4.  The user's PC sends its NTLMv2 hash to the attacker.
-5.  Capture the hash and crack it offline.
+5.  **Download the captured hash file.**
+6.  Crack the hash offline.
 
 **Why This Matters:**
 This is one of the most common ways to get an initial foothold. It requires zero credentials and only relies on being on the same network.`,
@@ -53,10 +54,18 @@ This is one of the most common ways to get an initial foothold. It requires zero
         description:
           'A user on the network has mistyped a server name. Responder has poisoned the request and captured their hash!',
         command: null, // This step will auto-run
-        tip: 'The NTLMv2 hash is now saved to your "Files" tab.'
+        tip: 'The NTLMv2 hash is now saved to "captured_hash.txt" on your machine.'
       },
       {
         number: 3,
+        title: 'Download Loot',
+        description:
+          'The hashes were saved to "captured_hash.txt" on the machine. Use "ls" to confirm and "download" to retrieve it.',
+        command: 'download captured_hash.txt',
+        tip: 'This will add the hash file to your "Files" tab.'
+      },
+      {
+        number: 4,
         title: 'Crack the Hash',
         description:
           'Use "hashcat" to crack the NTLMv2 hash (mode 5600) against a wordlist.',
@@ -65,10 +74,10 @@ This is one of the most common ways to get an initial foothold. It requires zero
         tip: 'NTLMv2 hashes are strong, but often crackable if the password is weak.'
       },
       {
-        number: 4,
+        number: 5,
         title: 'Credentials Obtained',
         description:
-          'Success! You now have a valid user password.',
+          'Success! The cracked password is now in your "Files" tab.',
         command: null,
         tip:
           'You can now use "b.user:Summer2025!" to continue your attack.'
@@ -108,10 +117,37 @@ This is one of the most common ways to get an initial foothold. It requires zero
         '[SMB] 10.0.1.50 -> 10.0.0.5 (SMB Auth Request for b.user)',
         '[ALERT] A client (10.0.1.50) has authenticated with an untrusted host (10.0.0.5)!'
       ],
-      delay: 1500 // Simulates waiting for a user
+      delay: 1500, // Simulates waiting for a user
+      // --- NEW: This step now places the file in the simulated system ---
+      lootToGrant: {
+        files: {
+          'captured_hash.txt': {
+            content: 'b.user::CONTOSO:1122334455667788:AABBCCDDEEFFGGHH...',
+            size: '1 KB'
+          }
+        }
+      }
     },
     {
       id: 3,
+      expectedCommand: 'download captured_hash.txt',
+      attackerOutput: [
+        '[*] Downloading "captured_hash.txt"...',
+        '[+] File "captured_hash.txt" (1 KB) downloaded successfully.',
+        '[+] File added to your "Files" tab.'
+      ],
+      serverOutput: [
+        '[NET] File transfer detected from 10.0.0.5 (captured_hash.txt)',
+        '[AUDIT] Potential exfiltration of data.'
+      ],
+      delay: 400,
+      // --- NEW: This step moves the file to the "Files" tab ---
+      lootToGrant: {
+        download: [{ id: 'llmnr', name: 'captured_hash.txt', size: '1 KB' }]
+      }
+    },
+    {
+      id: 4,
       expectedCommand: 'hashcat -m 5600 captured_hash.txt wordlist.txt',
       attackerOutput: [
         '[*] Starting Hashcat (NTLMv2, mode 5600)...',
@@ -127,10 +163,16 @@ This is one of the most common ways to get an initial foothold. It requires zero
       serverOutput: [
         '[SYSTEM] No network activity (offline cracking).'
       ],
-      delay: 200
+      delay: 200,
+      // --- NEW: This step adds the cracked password to the "Files" tab ---
+      lootToGrant: {
+        creds: [
+          { type: 'Password', username: 'b.user', secret: 'Summer2025!' }
+        ]
+      }
     },
     {
-      id: 4,
+      id: 5,
       expectedCommand: null,
       attackerOutput: [
         '',

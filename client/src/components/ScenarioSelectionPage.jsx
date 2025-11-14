@@ -12,17 +12,17 @@ import {
 const scenarioPrerequisites = {
   'asrep-roasting': 'nmap-recon',
   'password-spraying': 'nmap-recon',
-  'llmnr-poisoning': 'nmap-recon', // <-- ADD THIS (Also requires nmap)
+  'llmnr-poisoning': 'nmap-recon',
   'kerberoasting': 'asrep-roasting', // This path still works
   'bloodhound': 'kerberoasting',
   'pass-the-hash': 'bloodhound',
   'dcsync': 'pass-the-hash',
-  // You can add your new "Golden Ticket" scenario here later
-  // 'golden-ticket': 'dcsync', 
+  'golden-ticket': 'dcsync', // <-- ADD THIS
 };
 
 // --- Helper Component to Render a Single Scenario Card ---
-// This avoids duplicating code and keeps the main component clean
+// (This component is unchanged, so I'm omitting it for brevity)
+// ...
 function RenderScenarioCard({ scenario, allScenarios, progress, onScenarioSelect }) {
   if (!scenario) return null;
 
@@ -149,14 +149,12 @@ export default function ScenarioSelectionPage({ allScenarios, progress, customSc
                 progress={progress}
                 onScenarioSelect={onScenarioSelect}
               />
-              {/* --- ADD THE NEW SCENARIO CARD HERE --- */}
               <RenderScenarioCard
                 scenario={allScenarios['llmnr-poisoning']}
                 allScenarios={allScenarios}
                 progress={progress}
                 onScenarioSelect={onScenarioSelect}
               />
-              {/* -------------------------------------- */}
             </div>
             
             <div className="campaign-connector">
@@ -208,8 +206,23 @@ export default function ScenarioSelectionPage({ allScenarios, progress, customSc
                 progress={progress}
                 onScenarioSelect={onScenarioSelect}
               />
-              {/* You can add "Golden Ticket" here later */}
             </div>
+
+            {/* --- NEW: TIER 6 --- */}
+            <div className="campaign-connector">
+              <ChevronRight size={48} />
+            </div>
+            
+            <div className="campaign-tier">
+              <h3 className="tier-title">Phase 6: Persistence</h3>
+              <RenderScenarioCard
+                scenario={allScenarios['golden-ticket']}
+                allScenarios={allScenarios}
+                progress={progress}
+                onScenarioSelect={onScenarioSelect}
+              />
+            </div>
+            {/* --- END OF NEW TIER --- */}
 
           </div>
         </div>
