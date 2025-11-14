@@ -479,18 +479,16 @@ export default function SimulatorPage({
 
           {/* Modals */}
           <MissionModal
-            isOpen={showMissionBriefing}
-            // MODIFICATION: Use the new close handler
-            onClose={handleCloseBriefing}
-            type="briefing"
-            scenario={currentScenario}
-          />
-
-          <MissionModal
             isOpen={showMissionDebrief}
             onClose={() => {
               setShowMissionDebrief(false);
-              setShowQuiz(true);
+              
+              // --- THIS IS THE FIX ---
+              // Check if a quiz exists in the map BEFORE setting showQuiz to true
+              if (quizMap[scenarioId]) {
+                setShowQuiz(true);
+              }
+              // If no quiz exists, the modal just closes and nothing else happens.
             }}
             type="debrief"
             scenario={currentScenario}
