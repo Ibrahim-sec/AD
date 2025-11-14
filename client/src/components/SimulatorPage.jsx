@@ -15,6 +15,8 @@ import {
   addQuizScore,
   unlockAchievement
 } from '../lib/progressTracker.js';
+// ADD THIS IMPORT
+import { safeGetItem, safeSetItem } from '../lib/safeStorage.js';
 
 // Helper function definitions
 const calculateScenarioScore = (wrongAttempts, hintsUsed) => {
@@ -73,7 +75,16 @@ export default function SimulatorPage({
 
 
   // --- MODAL / GAME STATE ---
-  const [showMissionBriefing, setShowMissionBriefing] = useState(true); 
+  
+  // MODIFICATION 1: Make useState check localStorage
+  const briefingStorageKey = `hasSeenBriefing_${scenarioId}`;
+  const [showMissionBriefing, setShowMissionBriefing] = useState(() => {
+    // Read from storage. Default to `null` if not found.
+    const hasSeen = safeGetItem(briefingStorageKey, null);
+    // Show the modal only if `hasSeen` is NOT true.
+    return hasSeen !== true;
+  }); 
+  
   const [showMissionDebrief, setShowMissionDebrief] = useState(false);
   const [showQuiz, setShowQuiz] = useState(false);
   const [showAchievements, setShowAchievements] = useState(false);
@@ -110,7 +121,11 @@ export default function SimulatorPage({
   useEffect(() => {
     resetScenario();
     setCredentialInventory([]); // Reset inventory on new scenario load
-    setShowMissionBriefing(true);
+    
+    // MODIFICATION: Check storage key to decide if briefing should be shown on scenario load
+    const hasSeen = safeGetItem(briefingStorageKey, null);
+    setShowMissionBriefing(hasSeen !== true);
+
     setShowMissionDebrief(false);
     setShowQuiz(false);
     setScenarioStats({
@@ -119,7 +134,7 @@ export default function SimulatorPage({
       startTime: Date.now()
     });
     setHintsShown({});
-  }, [scenarioId]);
+  }, [scenarioId, briefingStorageKey]); // Add briefingStorageKey to dependency array
 
   const resetScenario = () => {
     setCurrentStep(0);
@@ -327,6 +342,12 @@ export default function SimulatorPage({
     setShowQuiz(false);
   };
   
+  // MODIFICATION: Create a handler to set the localStorage flag on close
+  const handleCloseBriefing = () => {
+    setShowMissionBriefing(false);
+    safeSetItem(briefingStorageKey, true);
+  };
+
   // --- RENDERING ---
   return (
     <div className="simulator-container full-page">
@@ -363,6 +384,8 @@ export default function SimulatorPage({
                   }}
                   highlightedMachine={highlightedMachine}
                   highlightedArrow={highlightedArrow}
+                  // MODIFICATION: Add prop to re-open the briefing
+                  onShowBriefing={() => setShowMissionBriefing(true)}
                 />
                 
                 {/* COLUMN 2: Unified Terminal & Logs Panel */}
@@ -386,7 +409,8 @@ export default function SimulatorPage({
           {/* Modals */}
           <MissionModal
             isOpen={showMissionBriefing}
-            onClose={() => setShowMissionBriefing(false)}
+            // MODIFICATION: Use the new close handler
+            onClose={handleCloseBriefing}
             type="briefing"
             scenario={currentScenario}
           />
