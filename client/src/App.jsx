@@ -1,11 +1,11 @@
 // client/src/App.jsx
 
-import React, { useState, useEffect } from 'react'; // <-- ADD THIS LINE
-import { Route, Switch, Redirect } from 'wouter';
+import React, { useState, useEffect } from 'react';
+import { Route, Switch } from 'wouter';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 import SimulatorPage from './components/SimulatorPage';
 import ScenarioEditor from './components/ScenarioEditor';
-import HomePage from './components/HomePage'; // <-- Make sure this line exists too
+import HomePage from './components/HomePage';
 import { scenarios, scenarioMap } from './data/scenarios/index.js';
 import { loadProgress, saveProgress } from './lib/progressTracker.js';
 import { checkStorageHealth } from './lib/safeStorage.js';
@@ -33,7 +33,6 @@ class ErrorBoundary extends React.Component {
     console.error('Application Error:', error, errorInfo);
     this.setState({ error, errorInfo });
     
-    // Log to error tracking service if available
     if (window.trackError) {
       window.trackError(error, errorInfo);
     }
@@ -112,7 +111,7 @@ class ErrorBoundary extends React.Component {
 
 export default function App() {
   const [progress, setProgress] = useState(null);
-  const [appMode, setAppMode] = useState('simulator'); // 'simulator' or 'editor'
+  const [appMode, setAppMode] = useState('simulator');
   const [isLoading, setIsLoading] = useState(true);
   const [storageWarning, setStorageWarning] = useState(null);
 
@@ -124,7 +123,6 @@ export default function App() {
 
   const initializeApp = async () => {
     try {
-      // Check storage health
       const health = checkStorageHealth();
       
       if (!health.available) {
@@ -139,18 +137,15 @@ export default function App() {
         });
       }
 
-      // Load progress
       const loadedProgress = loadProgress();
       setProgress(loadedProgress);
       
-      // Small delay for smooth loading
       await new Promise(resolve => setTimeout(resolve, 300));
       
       setIsLoading(false);
     } catch (error) {
       console.error('Failed to initialize app:', error);
       
-      // Fallback to default progress
       const defaultProgress = {
         totalScore: 0,
         rank: 'Novice',
@@ -216,7 +211,8 @@ export default function App() {
   
   return (
     <ErrorBoundary showDetails={process.env.NODE_ENV === 'development'}>
-      <div className="app-container">
+      {/* NO RESTRICTING CONTAINER - Let pages scroll naturally */}
+      <div>
         {/* Storage Warning Banner */}
         {storageWarning && (
           <div className={`fixed top-0 left-0 right-0 z-50 px-4 py-3 text-center text-sm ${
