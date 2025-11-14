@@ -1,11 +1,6 @@
-// Central scenario registry
-//
-// This file imports each defined attack scenario and then exports them
-// in a list and an ID-based map. When adding new scenarios, import the
-// scenario module here and add it to both the `scenarios` array and the
-// `scenarioMap` object. The keys in scenarioMap should match each
-// scenario's `id` property.
+// In client/src/data/scenarios/index.js
 
+import nmapScenario from './nmap.js'; // <-- ADD THIS IMPORT
 import bloodhoundScenario from './bloodhound.js';
 import kerberoastScenario from './kerberoast.js';
 import asrepScenario from './asrep.js';
@@ -14,20 +9,22 @@ import dcsyncScenario from './dcsync.js';
 
 // Array of all scenarios in the order they should appear in the UI
 export const scenarios = [
-  bloodhoundScenario,
-  kerberoastScenario,
+  nmapScenario, // <-- ADD THIS
   asrepScenario,
+  kerberoastScenario,
+  bloodhoundScenario,
   pthScenario,
   dcsyncScenario
 ];
 
 // Map scenario IDs to scenario objects for quick lookup
 export const scenarioMap = {
-  bloodhound: bloodhoundScenario,
-  kerberoasting: kerberoastScenario,
+  'nmap-recon': nmapScenario, // <-- ADD THIS
   'asrep-roasting': asrepScenario,
+  'kerberoasting': kerberoastScenario,
+  'bloodhound': bloodhoundScenario,
   'pass-the-hash': pthScenario,
-  dcsync: dcsyncScenario
+  'dcsync': dcsyncScenario
 };
 
 export default scenarios;
