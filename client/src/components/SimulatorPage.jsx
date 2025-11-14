@@ -3,7 +3,6 @@ import { Redirect, Link } from 'wouter';
 import Header from './Header';
 import GuidePanel from './GuidePanel';
 import AttackerPanel from './AttackerPanel';
-// REMOVED: import NetworkMap from './NetworkMap';
 import MissionModal from './MissionModal';
 import QuizPanel from './QuizPanel';
 import AchievementsPanel from './AchievementsPanel';
@@ -270,12 +269,12 @@ export default function SimulatorPage({
         rank={progress.rank}
       />
       
-      {/* REMOVED: NetworkMap component call from here */}
+      {/* NetworkMap has been moved inside GuidePanel */}
       
       <div className="main-layout">
         <div className="main-content">
           <div className="simulation-page-grid">
-            {/* COLUMN 1: Guide Panel (Fixed Width portion) */}
+            {/* COLUMN 1: Guide Panel (including the Collapsible Network Map) */}
             <GuidePanel 
               scenario={currentScenario}
               currentStep={currentStep}
@@ -289,7 +288,7 @@ export default function SimulatorPage({
               highlightedArrow={highlightedArrow}
             />
             
-            {/* COLUMN 2: Unified Terminal & Logs Panel (Flexible portion) */}
+            {/* COLUMN 2: Unified Terminal & Logs Panel */}
             <AttackerPanel 
               history={attackerHistory}
               onCommandSubmit={handleCommandSubmit}
