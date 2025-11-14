@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Terminal, Server, Shield, Lock, Key, ChevronDown } from 'lucide-react'; 
+// [1] IMPORT NEW ICONS
+import { Terminal, Server, Shield, Lock, Key, ChevronDown, FolderArchive, FileText } from 'lucide-react'; 
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -15,7 +16,8 @@ export default function AttackerPanel({
   onShowHint,
   hintsAvailable = false,
   defenseHistory = [], // Defense logs
-  credentialInventory = [] // Credential list
+  credentialInventory = [], // Credential list
+  simulatedFiles = [] // NEW: Files list
 }) {
   const [currentCommand, setCurrentCommand] = useState('');
   const [commandHistory, setCommandHistory] = useState([]);
@@ -28,9 +30,17 @@ export default function AttackerPanel({
   const logsEndRef = useRef(null);
   const defenseScrollRef = useRef(null);
   const defenseEndRef = useRef(null);
+  const lootScrollRef = useRef(null); // NEW: Ref for loot tab
+  const lootEndRef = useRef(null); // NEW: Ref for loot tab
   const inputRef = useRef(null);
 
-  const currentTab = activeMachine === 'attacker' ? 'attacker-console' : activeMachine === 'defense' ? 'defense-view' : 'logs-view';
+  const currentTab = activeMachine === 'attacker' 
+    ? 'attacker-console' 
+    : activeMachine === 'defense' 
+      ? 'defense-view' 
+      : activeMachine === 'loot'
+        ? 'loot-view'
+        : 'logs-view';
   
   // Internal state for selected machine when on the 'logs-view' tab
   const [logMachine, setLogMachine] = useState(activeMachine === 'dc' ? 'dc' : 'internal');
@@ -68,10 +78,11 @@ export default function AttackerPanel({
     }, dependencyArray);
   };
 
-  // Apply smart scroll to all three views
+  // Apply smart scroll to all views
   createSmartScrollEffect(terminalScrollRef, terminalEndRef, [history, isProcessing]);
   createSmartScrollEffect(logsScrollRef, logsEndRef, [serverHistory]);
   createSmartScrollEffect(defenseScrollRef, defenseEndRef, [defenseHistory]);
+  createSmartScrollEffect(lootScrollRef, lootEndRef, [simulatedFiles, credentialInventory]); // NEW
 
   // Focus input on mount/tab change
   useEffect(() => {
@@ -99,7 +110,8 @@ export default function AttackerPanel({
   const handleKeyDown = (e) => {
     if (e.key === 'Tab') {
       e.preventDefault();
-      const machines = ['attacker', 'internal', 'dc', 'defense']; 
+      // NEW: Added 'loot' to tab cycle
+      const machines = ['attacker', 'internal', 'dc', 'defense', 'loot']; 
       const currentIndex = machines.indexOf(activeMachine);
       const nextIndex = (currentIndex + 1) % machines.length;
       onMachineChange(machines[nextIndex]);
@@ -135,11 +147,14 @@ export default function AttackerPanel({
     setCurrentCommand(command);
   };
   
+  // NEW: Updated tab change handler
   const handleTabChange = (value) => {
       if (value === 'attacker-console') {
           onMachineChange('attacker');
       } else if (value === 'defense-view') {
           onMachineChange('defense');
+      } else if (value === 'loot-view') {
+          onMachineChange('loot');
       } else {
           onMachineChange(logMachine);
       }
@@ -174,6 +189,13 @@ export default function AttackerPanel({
           ip: '0.0.0.0',
           role: 'Blue Team Console',
           logs: defenseHistory
+        };
+      case 'loot': // NEW
+        return {
+            hostname: 'LOOT-INVENTORY',
+            ip: '127.0.0.1',
+            role: 'Collected Assets',
+            logs: []
         };
       default:
         return {
@@ -252,11 +274,14 @@ export default function AttackerPanel({
   };
   
   const currentLogInfo = getMachineInfo(logMachine);
+  // NEW: Updated IP logic
   const activeIp = currentTab === 'attacker-console' 
     ? network.attacker.ip 
     : currentTab === 'defense-view'
       ? getMachineInfo('defense').ip
-      : currentLogInfo.ip;
+      : currentTab === 'loot-view'
+        ? getMachineInfo('loot').ip
+        : currentLogInfo.ip;
 
   return (
     <div className="panel attacker-panel">
@@ -281,6 +306,10 @@ export default function AttackerPanel({
             <TabsTrigger value="defense-view">
                 <Lock size={16} /> Defense
             </TabsTrigger>
+            {/* [2] NEW TAB TRIGGER */}
+            <TabsTrigger value="loot-view">
+                <FolderArchive size={16} /> Files
+            </TabsTrigger>
           </TabsList>
           
           <span className="panel-badge ml-auto">
@@ -302,33 +331,9 @@ export default function AttackerPanel({
             <div className="flex-1 overflow-y-auto min-h-0" ref={terminalScrollRef}>
                 {renderTerminalConsole()}
             </div>
+            
+            {/* [4] REMOVED Collapsible Credential Inventory from here */}
 
-            {/* Credential Inventory Section */}
-            {credentialInventory.length > 0 && (
-                <div className="p-4 pt-0 flex-shrink-0">
-                    <Collapsible defaultOpen={true}>
-                        <div className="flex items-center justify-between p-2 rounded-md bg-guide-bg">
-                            <h4 className="text-xs font-semibold text-accent-color flex items-center gap-2">
-                                <Key size={14} /> COMPROMISED ASSETS ({credentialInventory.length})
-                            </h4>
-                            <CollapsibleTrigger asChild>
-                                <ChevronDown size={18} className="text-server-text hover:text-terminal-text cursor-pointer" />
-                            </CollapsibleTrigger>
-                        </div>
-                        <CollapsibleContent className="mt-2 border border-border-color rounded-md overflow-hidden">
-                            <div className="bg-terminal-bg max-h-40 overflow-y-auto">
-                                {credentialInventory.map(cred => (
-                                    <div key={cred.id} className="p-2 border-b border-border-color last:border-b-0 text-sm">
-                                        <span className="font-bold text-terminal-text">{cred.username}</span> 
-                                        <span className="text-server-text"> ({cred.type})</span>: 
-                                        <code className="text-terminal-green break-all ml-1">{cred.secret}</code>
-                                    </div>
-                                ))}
-                            </div>
-                        </CollapsibleContent>
-                    </Collapsible>
-                </div>
-            )}
           </TabsContent>
           
           {/* TAB CONTENT 2: Logs Viewer (Internal Server & DC) */}
@@ -371,6 +376,45 @@ export default function AttackerPanel({
                 ref={defenseScrollRef}
             >
                 {renderDefenseOutput()}
+            </div>
+          </TabsContent>
+
+          {/* [3] NEW TAB CONTENT FOR LOOT */}
+          <TabsContent value="loot-view" className="p-0 h-full flex flex-col">
+            <div 
+              className="server-content flex-1 overflow-y-auto p-4" 
+              ref={lootScrollRef}
+            >
+              <h3 className="guide-section-title">Collected Files</h3>
+              {simulatedFiles.length === 0 ? (
+                <p className="text-server-text text-sm">No files collected yet.</p>
+              ) : (
+                <div className="bg-terminal-bg border border-border-color rounded-md overflow-hidden">
+                  {simulatedFiles.map(file => (
+                    <div key={file.id} className="p-3 border-b border-border-color last:border-b-0 text-sm flex items-center gap-3">
+                      <FileText size={16} className="text-accent-color" />
+                      <span className="font-bold text-terminal-text">{file.name}</span>
+                      <span className="text-server-text ml-auto">({file.size})</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <h3 className="guide-section-title mt-6">Compromised Credentials</h3>
+              {credentialInventory.length === 0 ? (
+                <p className="text-server-text text-sm">No credentials harvested yet.</p>
+              ) : (
+                <div className="bg-terminal-bg border border-border-color rounded-md overflow-hidden">
+                  {credentialInventory.map(cred => (
+                    <div key={cred.id} className="p-3 border-b border-border-color last:border-b-0 text-sm">
+                        <span className="font-bold text-terminal-text">{cred.username}</span> 
+                        <span className="text-server-text"> ({cred.type})</span>: 
+                        <code className="text-terminal-green break-all ml-2">{cred.secret}</code>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div ref={lootEndRef} />
             </div>
           </TabsContent>
 

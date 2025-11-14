@@ -64,6 +64,7 @@ export default function SimulatorPage({
   // NEW STATE: Feature Management
   const [defenseHistory, setDefenseHistory] = useState([]);
   const [credentialInventory, setCredentialInventory] = useState([]);
+  const [simulatedFiles, setSimulatedFiles] = useState([]); // [1] NEW STATE FOR FILES
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [customTheme, setCustomTheme] = useState(() => {
     try {
@@ -117,10 +118,12 @@ export default function SimulatorPage({
       });
   };
 
+  // [2] NEW FILE STATE RESET
   // --- Initialize/Reset State ---
   useEffect(() => {
     resetScenario();
     setCredentialInventory([]); // Reset inventory on new scenario load
+    setSimulatedFiles([]); // Reset files on new scenario load
     
     // MODIFICATION: Check storage key to decide if briefing should be shown on scenario load
     const hasSeen = safeGetItem(briefingStorageKey, null);
@@ -181,6 +184,7 @@ export default function SimulatorPage({
   
   // --- CORE SIMULATION LOGIC ---
   
+  // [3] UPDATED FUNCTION
   const processStepOutput = async (step) => {
     const { attackerOutput, serverOutput, delay } = step;
 
@@ -203,17 +207,31 @@ export default function SimulatorPage({
       ]);
     }
 
-    // NEW: Simulate credential harvesting on certain successful steps
+    // --- NEW: Simulate file/credential harvesting on certain successful steps ---
+    if (step.id === 2 && scenarioId === 'bloodhound') {
+        setSimulatedFiles(prev => [...prev, { id: 'bh', name: 'BH.zip', size: '2.3 MB' }]);
+    }
+    if (step.id === 3 && scenarioId === 'kerberoasting') {
+        setSimulatedFiles(prev => [...prev, { id: 'kb', name: 'kerberoast_hashes.txt', size: '8 KB' }]);
+    }
     if (step.id === 4 && scenarioId === 'kerberoasting') {
         harvestCredential('Password', 'sqlservice', 'P@ssw0rd123!');
         harvestCredential('Password', 'iis_app', 'ServicePass2024');
     }
+    if (step.id === 2 && scenarioId === 'asrep-roasting') {
+        setSimulatedFiles(prev => [...prev, { id: 'asrep', name: 'asrep_hashes.txt', size: '4 KB' }]);
+    }
     if (step.id === 3 && scenarioId === 'asrep-roasting') {
-        harvestCredential('Hash', 'svc_backup', 'BackupHash123');
+        harvestCredential('Hash', 'svc_backup', 'BackupPass123');
     }
     if (step.id === 1 && scenarioId === 'pass-the-hash') {
         harvestCredential('Hash', 'admin', '5f4dcc3b5aa765d61d8327deb882cf99');
     }
+    if (step.id === 2 && scenarioId === 'dcsync') {
+        harvestCredential('Hash', 'krbtgt', 'ffffffffffffffffffffffffffffffff');
+    }
+    // --- End of new harvesting logic ---
+
 
     // NEW: Add Defense Alert after outputs are streamed
     const defenseAlert = getDefenseAlertForStep(step.id, scenarioId);
@@ -439,6 +457,7 @@ export default function SimulatorPage({
                   onShowBriefing={() => setShowMissionBriefing(true)}
                 />
                 
+                {/* [4] PASSING NEW PROPS */}
                 {/* COLUMN 2: Unified Terminal & Logs Panel */}
                 <AttackerPanel 
                   history={attackerHistory}
@@ -450,6 +469,7 @@ export default function SimulatorPage({
                   serverHistory={serverHistory}
                   defenseHistory={defenseHistory} 
                   credentialInventory={credentialInventory}
+                  simulatedFiles={simulatedFiles} 
                   onShowHint={() => handleShowHint(currentStep)}
                   hintsAvailable={currentStep < currentScenario.steps.length}
                 />
