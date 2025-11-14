@@ -4,6 +4,7 @@ import { Streamdown } from 'streamdown';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import NetworkMap from './NetworkMap';
 
+// ... (getInitialCollapseState and compromiseMap helpers remain the same) ...
 const GUIDE_COLLAPSE_KEY = 'guide_panel_open';
 const NETWORK_COLLAPSE_KEY = 'network_map_open';
 
@@ -32,11 +33,12 @@ export default function GuidePanel({
   highlightedMachine,
   highlightedArrow,
   progress,
-  onNodeClick 
+  onNodeClick // <-- 1. ACCEPT THE NEW PROP
 }) {
   const { guide } = scenario;
   const currentGuideStep = guide.steps[currentStep];
 
+  // ... (state and handlers remain the same) ...
   const [isNetworkOpen, setIsNetworkOpen] = useState(() => getInitialCollapseState(NETWORK_COLLAPSE_KEY));
   const [isGuideOpen, setIsGuideOpen] = useState(() => getInitialCollapseState(GUIDE_COLLAPSE_KEY));
   
@@ -68,9 +70,7 @@ export default function GuidePanel({
   }, [progress]);
 
   return (
-    // **** THIS IS THE FIX ****
-    // Removed "gap-4" from the className below
-    <div className="panel guide-panel flex flex-col">
+    <div className="panel guide-panel flex flex-col gap-4">
         
         {/* 1. Network Topology Panel (Collapsible) */}
         <Collapsible 
@@ -94,15 +94,15 @@ export default function GuidePanel({
                         highlightedArrow={highlightedArrow}
                         network={scenario.network}
                         compromisedNodes={compromisedNodes}
-                        onNodeClick={onNodeClick} 
+                        onNodeClick={onNodeClick} // <-- 2. PASS THE PROP DOWN
                     />
                 </div>
             </CollapsibleContent>
         </Collapsible>
         
         {/* 2. Attack Guide Panel (Main Content) */}
-        {/* This structure is correct and will now fill the remaining space */}
-        <div className="flex-1 border border-border-color rounded-lg overflow-hidden flex flex-col min-h-0 mt-4">
+        {/* ... (rest of the file is unchanged) ... */}
+        <div className="flex-1 border border-border-color rounded-lg overflow-hidden flex flex-col min-h-0">
             <Collapsible 
                 open={isGuideOpen}
                 onOpenChange={handleGuideToggle}
@@ -132,7 +132,6 @@ export default function GuidePanel({
                     </CollapsibleTrigger>
                 </div>
                 
-                {/* This content will now scroll internally */}
                 <CollapsibleContent className="flex-1 overflow-y-auto">
                     <div className="panel-content !p-4">
                         <section className="guide-section">

@@ -241,13 +241,31 @@
 /* ===================================
    Guide Panel
    =================================== */
-/* AFTER */
 .guide-panel {
-  background: var(--guide-bg);
-  /* overflow-y: auto;  <-- REMOVE THIS LINE */
   display: flex;
   flex-direction: column;
   min-height: 0;
+  height: 100%; /* ensure it fills its parent vertical space */
+}
+
+/* For the Network Topology panel, restrict its height if needed */
+.guide-panel > .network-topology-panel {
+  flex-shrink: 0;
+}
+
+/* For the Attack Guide panel main content */
+.guide-panel > .attack-guide-panel {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.collapsible-content {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
 }
 /* Make the collapsible content area the scrollable part */
 .guide-panel [data-state="open"] {
