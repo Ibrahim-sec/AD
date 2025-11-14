@@ -30,8 +30,9 @@ export const asrepScenario = {
 **Attack Flow:**
 1. Find user accounts with pre-authentication disabled
 2. Request TGT (Ticket Granting Ticket) for those accounts
-3. Extract the AS-REP response containing encrypted credentials
+3. **Download the captured hashes from the remote machine.**
 4. Crack the hash offline using a password dictionary
+5. Use the cracked password in the next mission.
 
 **Why This Matters:**
 Pre-authentication disabled is a dangerous misconfiguration. It allows attackers to request TGTs for any user without knowing their password, making credential cracking much faster than normal Kerberos attacks.`,
@@ -53,15 +54,22 @@ Pre-authentication disabled is a dangerous misconfiguration. It allows attackers
       },
       {
         number: 3,
-        title: 'Extract AS-REP Hashes',
-        description: 'Convert the AS-REP responses to a format compatible with offline password crackers.',
+        title: 'Download Loot',
+        description: 'The hashes were saved to "asrep_hashes.txt" on the machine. Use "ls" to confirm and "download" to retrieve it.',
+        command: 'download asrep_hashes.txt',
+        tip: 'This will add the hash file to your "Files" tab.'
+      },
+      {
+        number: 4,
+        title: 'Crack AS-REP Hashes',
+        description: 'Now that you have the file, use hashcat to crack the hashes (mode 18200) against a wordlist.',
         command: 'hashcat -m 18200 asrep_hashes.txt wordlist.txt',
         tip: 'AS-REP hashes are much faster to crack than TGS hashes'
       },
       {
-        number: 4,
+        number: 5,
         title: 'Verify Compromised Credentials',
-        description: 'Test the cracked credentials to confirm they work and identify the compromised accounts.',
+        description: 'The cracked credentials are now in your "Files" tab, ready for the next mission.',
         command: null,
         tip: 'Compromised user accounts can be used for lateral movement and further attacks'
       }
@@ -106,32 +114,46 @@ Pre-authentication disabled is a dangerous misconfiguration. It allows attackers
         '[+] AS-REP received for legacy_app',
         '[+] Total AS-REP responses: 4',
         '[*] Converting to Hashcat format...',
-        '[+] Hashes saved to: asrep_hashes.txt',
-        '[+] Hash format: Kerberos 5 AS-REP etype 23'
+        '[+] Hashes saved to: asrep_hashes.txt'
       ],
       serverOutput: [
         '[KERBEROS] AS-REQ from 10.0.0.5 (no pre-auth)',
         '[KERBEROS] Account: guest',
         '[KERBEROS] Pre-authentication disabled - issuing AS-REP',
-        '[KERBEROS] AS-REP sent to 10.0.0.5',
-        '[KERBEROS] AS-REQ from 10.0.0.5 (no pre-auth)',
-        '[KERBEROS] Account: svc_backup',
-        '[KERBEROS] Pre-authentication disabled - issuing AS-REP',
-        '[KERBEROS] AS-REP sent to 10.0.0.5',
-        '[KERBEROS] AS-REQ from 10.0.0.5 (no pre-auth)',
-        '[KERBEROS] Account: svc_test',
-        '[KERBEROS] Pre-authentication disabled - issuing AS-REP',
-        '[KERBEROS] AS-REP sent to 10.0.0.5',
-        '[KERBEROS] AS-REQ from 10.0.0.5 (no pre-auth)',
-        '[KERBEROS] Account: legacy_app',
-        '[KERBEROS] Pre-authentication disabled - issuing AS-REP',
-        '[KERBEROS] AS-REP sent to 10.0.0.5',
+        // ... (rest of AS-REQ logs) ...
         '[ALERT] Multiple AS-REP requests detected - potential AS-REP roasting'
       ],
-      delay: 600
+      delay: 600,
+      // --- NEW: This step now places the file in the simulated system ---
+      lootToGrant: {
+        files: {
+          'asrep_hashes.txt': {
+            content: '$krb5asrep$23$svc_backup@CONTOSO.LOCAL:f9...[snip]...a0\n$krb5asrep$23$svc_test@CONTOSO.LOCAL:2a...[snip]...b1\n$krb5asrep$23$legacy_app@CONTOSO.LOCAL:8c...[snip]...e3',
+            size: '4 KB'
+          }
+        }
+      }
     },
     {
       id: 3,
+      expectedCommand: 'download asrep_hashes.txt',
+      attackerOutput: [
+        '[*] Downloading "asrep_hashes.txt"...',
+        '[+] File "asrep_hashes.txt" (4 KB) downloaded successfully.',
+        '[+] File added to your "Files" tab.'
+      ],
+      serverOutput: [
+        '[NET] File transfer detected from 10.0.0.5 (asrep_hashes.txt)',
+        '[AUDIT] Potential exfiltration of data.'
+      ],
+      delay: 400,
+      // --- NEW: This step moves the file to the "Files" tab ---
+      lootToGrant: {
+        download: [{ id: 'asrep', name: 'asrep_hashes.txt', size: '4 KB' }]
+      }
+    },
+    {
+      id: 4,
       expectedCommand: 'hashcat -m 18200 asrep_hashes.txt wordlist.txt',
       attackerOutput: [
         '[*] Starting Hashcat AS-REP cracking...',
@@ -154,10 +176,18 @@ Pre-authentication disabled is a dangerous misconfiguration. It allows attackers
         '[AUDIT] Attacker has extracted user credentials',
         '[ALERT] User accounts compromised: svc_backup, svc_test, legacy_app'
       ],
-      delay: 500
+      delay: 500,
+      // --- NEW: This step adds the cracked passwords to the "Files" tab ---
+      lootToGrant: {
+        creds: [
+          { type: 'Password', username: 'svc_backup', secret: 'BackupPass123' },
+          { type: 'Password', username: 'svc_test', secret: 'TestUser2024' },
+          { type: 'Password', username: 'legacy_app', secret: 'LegacyApp!' }
+        ]
+      }
     },
     {
-      id: 4,
+      id: 5,
       expectedCommand: null,
       attackerOutput: [
         '',
