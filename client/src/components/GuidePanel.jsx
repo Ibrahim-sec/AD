@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-// MODIFICATION 1: Add 'Target' icon
-import { BookOpen, Lightbulb, Terminal, ChevronDown, Network, Target } from 'lucide-react'; 
+import { BookOpen, Lightbulb, Terminal, ChevronDown, Network, Target } from 'lucide-react';
 import { Streamdown } from 'streamdown';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import NetworkMap from './NetworkMap';
@@ -28,10 +27,11 @@ export default function GuidePanel({
   onTutorialToggle,
   highlightedMachine,
   highlightedArrow,
-  onShowBriefing, // MODIFICATION 2: Accept the new prop
-  network // This prop is now used by NetworkMap
+  onShowBriefing
 }) {
-  const { guide } = scenario;
+  // *** THIS IS THE FIX ***
+  // Destructure BOTH guide and network from the scenario prop
+  const { guide, network } = scenario; 
   const currentGuideStep = guide.steps[currentStep];
 
   // State for Network Map collapse
@@ -77,7 +77,7 @@ export default function GuidePanel({
                     <NetworkMap 
                         highlightedMachine={highlightedMachine}
                         highlightedArrow={highlightedArrow}
-                        network={network} {/* Pass the network prop here */}
+                        network={network} {/* This will now correctly receive the network object */}
                     />
                 </div>
             </CollapsibleContent>
@@ -94,10 +94,9 @@ export default function GuidePanel({
                     <BookOpen size={20} />
                     <h2 className="!text-sm !font-medium flex-1">Attack Guide</h2>
                     
-                    {/* MODIFICATION 3: Add a container for the buttons */}
-                    {/* This div groups the new Briefing button and the Tutorial toggle */}
+                    {/* Container for the buttons */}
                     <div className="flex items-center gap-2 absolute right-10"> 
-                        {/* New Briefing Button */}
+                        {/* Briefing Button */}
                         {onShowBriefing && (
                           <button 
                               className="tutorial-toggle" // Reuse tutorial-toggle style
