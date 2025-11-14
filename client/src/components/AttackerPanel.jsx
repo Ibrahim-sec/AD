@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Terminal, Server, Shield } from 'lucide-react';
+import { Terminal, Server, Shield, Lock, Key, ChevronDown } from 'lucide-react'; 
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 export default function AttackerPanel({ 
   history, 
@@ -12,20 +13,24 @@ export default function AttackerPanel({
   onMachineChange,
   serverHistory,
   onShowHint,
-  hintsAvailable = false
+  hintsAvailable = false,
+  defenseHistory = [], // Defense logs
+  credentialInventory = [] // Credential list
 }) {
   const [currentCommand, setCurrentCommand] = useState('');
-  const [commandHistory, setCommandHistory] = useState([]); // NEW STATE: Stores successful commands
-  const [historyIndex, setHistoryIndex] = useState(0); // NEW STATE: Tracks position in history (0 to commandHistory.length)
+  const [commandHistory, setCommandHistory] = useState([]);
+  const [historyIndex, setHistoryIndex] = useState(0);
   
-  // Create separate refs for each scrollable area and its end-point
+  // Refs for Scrollable Areas (used for Smart Scrolling)
   const terminalScrollRef = useRef(null);
   const terminalEndRef = useRef(null);
   const logsScrollRef = useRef(null);
   const logsEndRef = useRef(null);
+  const defenseScrollRef = useRef(null);
+  const defenseEndRef = useRef(null);
   const inputRef = useRef(null);
 
-  const currentTab = activeMachine === 'attacker' ? 'attacker-console' : 'logs-view';
+  const currentTab = activeMachine === 'attacker' ? 'attacker-console' : activeMachine === 'defense' ? 'defense-view' : 'logs-view';
   
   // Internal state for selected machine when on the 'logs-view' tab
   const [logMachine, setLogMachine] = useState(activeMachine === 'dc' ? 'dc' : 'internal');
@@ -38,40 +43,36 @@ export default function AttackerPanel({
             if (prev.length > 0 && prev[prev.length - 1] === trimmedCommand) {
                 return prev;
             }
-            // Only store commands typed in the terminal
             return [...prev, trimmedCommand];
         });
-        // When a new command is added, reset the index to the end (new input line position)
         setHistoryIndex(prev => prev + 1);
     }
   }, []);
 
-  // --- SCROLL LOGIC ---
+  // --- SMART SCROLL LOGIC ---
   
-  // Smart scroll for Attacker Terminal
-  useEffect(() => {
-    const element = terminalScrollRef.current;
-    if (element) {
-      const isScrolledToBottom = 
-        element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
-      if (isProcessing || isScrolledToBottom) {
-        terminalEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-      }
-    }
-  }, [history, isProcessing]);
+  const createSmartScrollEffect = (scrollRef, endRef, dependencyArray) => {
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    useEffect(() => {
+        const element = scrollRef.current;
+        if (element) {
+            // Check if the user is already scrolled near the bottom (within 50px threshold)
+            const isScrolledToBottom = 
+                element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
+            
+            // Only auto-scroll if actively processing OR if user is near the bottom
+            if (isProcessing || isScrolledToBottom) {
+                endRef.current?.scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+    }, dependencyArray);
+  };
 
-  // Smart scroll for Server Logs
-  useEffect(() => {
-    const element = logsScrollRef.current;
-    if (element) {
-      const isScrolledToBottom = 
-        element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
-      if (isScrolledToBottom) {
-        logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-      }
-    }
-  }, [serverHistory]);
-  
+  // Apply smart scroll to all three views
+  createSmartScrollEffect(terminalScrollRef, terminalEndRef, [history, isProcessing]);
+  createSmartScrollEffect(logsScrollRef, logsEndRef, [serverHistory]);
+  createSmartScrollEffect(defenseScrollRef, defenseEndRef, [defenseHistory]);
+
   // Focus input on mount/tab change
   useEffect(() => {
     if (currentTab === 'attacker-console') {
@@ -79,13 +80,13 @@ export default function AttackerPanel({
     }
   }, [currentTab]);
 
-  // --- COMMAND INPUT LOGIC ---
+  // --- COMMAND INPUT / HISTORY LOGIC ---
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!currentCommand.trim() || isProcessing) return;
     
-    updateCommandHistory(currentCommand); // Update history here
+    updateCommandHistory(currentCommand);
     onCommandSubmit(currentCommand);
     setCurrentCommand('');
   };
@@ -94,19 +95,17 @@ export default function AttackerPanel({
     inputRef.current?.focus();
   };
   
-  // NEW: Handle Arrow Key navigation for Command History
+  // Handle Arrow Key navigation for Command History
   const handleKeyDown = (e) => {
-    // Intercept Tab key for machine switching (keeps old functionality)
     if (e.key === 'Tab') {
       e.preventDefault();
-      const machines = ['attacker', 'internal', 'dc'];
+      const machines = ['attacker', 'internal', 'dc', 'defense']; 
       const currentIndex = machines.indexOf(activeMachine);
       const nextIndex = (currentIndex + 1) % machines.length;
       onMachineChange(machines[nextIndex]);
       return;
     }
 
-    // Command History Navigation (only for attacker machine)
     if (activeMachine !== 'attacker' || isProcessing) return;
     
     let newIndex = historyIndex;
@@ -121,13 +120,11 @@ export default function AttackerPanel({
         newIndex = Math.min(commandHistory.length, historyIndex + 1);
         
         if (newIndex === commandHistory.length) {
-            // If moving past the last entry, clear command (new input line)
             command = '';
         } else {
             command = commandHistory[newIndex];
         }
     } else {
-        // If user starts typing a new command, reset the index to the end
         if (historyIndex < commandHistory.length) {
             setHistoryIndex(commandHistory.length);
         }
@@ -138,17 +135,16 @@ export default function AttackerPanel({
     setCurrentCommand(command);
   };
   
-  // When user clicks the main "Logs" tab, update the active machine
   const handleTabChange = (value) => {
       if (value === 'attacker-console') {
           onMachineChange('attacker');
+      } else if (value === 'defense-view') {
+          onMachineChange('defense');
       } else {
-          // If switching to logs tab, keep the last viewed log machine active
           onMachineChange(logMachine);
       }
   };
 
-  // When user clicks a sub-tab (e.g., DC), update both log view and active machine
   const handleLogMachineChange = (machine) => {
     setLogMachine(machine);
     onMachineChange(machine);
@@ -172,6 +168,13 @@ export default function AttackerPanel({
           role: 'Domain Controller',
           logs: serverHistory
         };
+      case 'defense':
+        return {
+          hostname: 'DEFENSE-GRID',
+          ip: '0.0.0.0',
+          role: 'Blue Team Console',
+          logs: defenseHistory
+        };
       default:
         return {
           hostname: network.attacker.hostname,
@@ -194,12 +197,24 @@ export default function AttackerPanel({
       <div ref={logsEndRef} />
     </div>
   );
+  
+  const renderDefenseOutput = () => (
+    <div className="server-output defense-output">
+      <h3 className="defense-title">Active Indicators of Compromise (IOCs)</h3>
+      {defenseHistory.map((entry, index) => (
+        <div key={index} className={`server-line ${entry.type}`}>
+          <span className="server-text">{entry.text}</span>
+        </div>
+      ))}
+      <div ref={defenseEndRef} />
+    </div>
+  );
 
   const renderTerminalConsole = () => {
     const attackerInfo = getMachineInfo('attacker');
     
     return (
-      <div className="terminal-output" ref={terminalScrollRef}>
+      <div className="terminal-output">
         {attackerInfo.logs.map((entry, index) => (
           <div key={index} className={`terminal-line ${entry.type}`}>
             {entry.type === 'command' && <span className="prompt-symbol">$</span>}
@@ -216,7 +231,7 @@ export default function AttackerPanel({
               type="text"
               value={currentCommand}
               onChange={(e) => setCurrentCommand(e.target.value)}
-              onKeyDown={handleKeyDown} // ATTACHED ARROW KEY HANDLER
+              onKeyDown={handleKeyDown}
               className="terminal-input"
               disabled={isProcessing}
               autoComplete="off"
@@ -237,9 +252,11 @@ export default function AttackerPanel({
   };
   
   const currentLogInfo = getMachineInfo(logMachine);
-  const activeIp = (currentTab === 'attacker-console' || activeMachine === 'attacker') 
+  const activeIp = currentTab === 'attacker-console' 
     ? network.attacker.ip 
-    : currentLogInfo.ip;
+    : currentTab === 'defense-view'
+      ? getMachineInfo('defense').ip
+      : currentLogInfo.ip;
 
   return (
     <div className="panel attacker-panel">
@@ -261,6 +278,9 @@ export default function AttackerPanel({
             <TabsTrigger value="logs-view">
                 <Server size={16} /> Logs
             </TabsTrigger>
+            <TabsTrigger value="defense-view">
+                <Lock size={16} /> Defense
+            </TabsTrigger>
           </TabsList>
           
           <span className="panel-badge ml-auto">
@@ -277,12 +297,41 @@ export default function AttackerPanel({
           className="panel-content terminal-content" 
           onClick={handleTerminalClick}
         >
-          {/* TAB CONTENT: Attacker Terminal */}
-          <TabsContent value="attacker-console" className="p-0 h-full">
-            {renderTerminalConsole()}
+          {/* TAB CONTENT 1: Attacker Terminal */}
+          <TabsContent value="attacker-console" className="p-0 h-full flex flex-col">
+            <div className="flex-1 overflow-y-auto min-h-0" ref={terminalScrollRef}>
+                {renderTerminalConsole()}
+            </div>
+
+            {/* Credential Inventory Section */}
+            {credentialInventory.length > 0 && (
+                <div className="p-4 pt-0 flex-shrink-0">
+                    <Collapsible defaultOpen={true}>
+                        <div className="flex items-center justify-between p-2 rounded-md bg-guide-bg">
+                            <h4 className="text-xs font-semibold text-accent-color flex items-center gap-2">
+                                <Key size={14} /> COMPROMISED ASSETS ({credentialInventory.length})
+                            </h4>
+                            <CollapsibleTrigger asChild>
+                                <ChevronDown size={18} className="text-server-text hover:text-terminal-text cursor-pointer" />
+                            </CollapsibleTrigger>
+                        </div>
+                        <CollapsibleContent className="mt-2 border border-border-color rounded-md overflow-hidden">
+                            <div className="bg-terminal-bg max-h-40 overflow-y-auto">
+                                {credentialInventory.map(cred => (
+                                    <div key={cred.id} className="p-2 border-b border-border-color last:border-b-0 text-sm">
+                                        <span className="font-bold text-terminal-text">{cred.username}</span> 
+                                        <span className="text-server-text"> ({cred.type})</span>: 
+                                        <code className="text-terminal-green break-all ml-1">{cred.secret}</code>
+                                    </div>
+                                ))}
+                            </div>
+                        </CollapsibleContent>
+                    </Collapsible>
+                </div>
+            )}
           </TabsContent>
           
-          {/* TAB CONTENT: Logs Viewer (Internal Server & DC) */}
+          {/* TAB CONTENT 2: Logs Viewer (Internal Server & DC) */}
           <TabsContent value="logs-view" className="p-0 h-full flex flex-col">
             
             {/* Machine Tabs/Selector for Logs View */}
@@ -314,6 +363,17 @@ export default function AttackerPanel({
             </div>
             
           </TabsContent>
+
+          {/* TAB CONTENT 3: Defense / Mitigation Panel */}
+          <TabsContent value="defense-view" className="p-0 h-full flex flex-col">
+            <div 
+                className="server-content flex-1 overflow-y-auto defense-content" 
+                ref={defenseScrollRef}
+            >
+                {renderDefenseOutput()}
+            </div>
+          </TabsContent>
+
         </div>
         
       </Tabs>

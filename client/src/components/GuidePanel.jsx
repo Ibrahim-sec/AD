@@ -1,7 +1,24 @@
+import { useState, useEffect } from 'react'; // ADDED useState/useEffect
 import { BookOpen, Lightbulb, Terminal, ChevronDown, Network } from 'lucide-react';
 import { Streamdown } from 'streamdown';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import NetworkMap from './NetworkMap';
+
+// Define localStorage keys for persistence
+const GUIDE_COLLAPSE_KEY = 'guide_panel_open';
+const NETWORK_COLLAPSE_KEY = 'network_map_open';
+
+// Helper to get initial state from localStorage, defaulting to true (open)
+const getInitialCollapseState = (key) => {
+    try {
+        const stored = localStorage.getItem(key);
+        // If stored value is null or 'true', return true. Only 'false' should return false.
+        if (stored === null) return true; 
+        return JSON.parse(stored);
+    } catch (e) {
+        return true;
+    }
+};
 
 export default function GuidePanel({ 
   scenario, 
@@ -14,11 +31,35 @@ export default function GuidePanel({
   const { guide } = scenario;
   const currentGuideStep = guide.steps[currentStep];
 
+  // State for Network Map collapse
+  const [isNetworkOpen, setIsNetworkOpen] = useState(() => getInitialCollapseState(NETWORK_COLLAPSE_KEY));
+  // State for Attack Guide collapse
+  const [isGuideOpen, setIsGuideOpen] = useState(() => getInitialCollapseState(GUIDE_COLLAPSE_KEY));
+  
+  // Handlers to update local state and localStorage
+  const handleNetworkToggle = (open) => {
+      setIsNetworkOpen(open);
+      try {
+          localStorage.setItem(NETWORK_COLLAPSE_KEY, JSON.stringify(open));
+      } catch (e) { /* ignore */ }
+  };
+  
+  const handleGuideToggle = (open) => {
+      setIsGuideOpen(open);
+      try {
+          localStorage.setItem(GUIDE_COLLAPSE_KEY, JSON.stringify(open));
+      } catch (e) { /* ignore */ }
+  };
+
   return (
     <div className="panel guide-panel flex flex-col gap-4">
         
         {/* 1. Network Topology Panel (Collapsible) */}
-        <Collapsible defaultOpen={true} className="border border-border-color rounded-lg overflow-hidden flex-shrink-0">
+        <Collapsible 
+            open={isNetworkOpen} // Control state via hook
+            onOpenChange={handleNetworkToggle} // Update state and localStorage
+            className="border border-border-color rounded-lg overflow-hidden flex-shrink-0"
+        >
             <div className="panel-header !bg-transparent !border-b !border-border-color">
                 <Network size={20} />
                 <h2 className="!text-sm !font-medium flex-1">Network Topology</h2>
@@ -40,7 +81,11 @@ export default function GuidePanel({
         
         {/* 2. Attack Guide Panel (Main Content) */}
         <div className="flex-1 border border-border-color rounded-lg overflow-hidden flex flex-col min-h-0">
-            <Collapsible defaultOpen={true} className="flex-1 flex flex-col min-h-0">
+            <Collapsible 
+                open={isGuideOpen} // Control state via hook
+                onOpenChange={handleGuideToggle} // Update state and localStorage
+                className="flex-1 flex flex-col min-h-0"
+            >
                 <div className="panel-header !bg-transparent !border-b !border-border-color relative">
                     <BookOpen size={20} />
                     <h2 className="!text-sm !font-medium flex-1">Attack Guide</h2>

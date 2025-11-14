@@ -6,6 +6,7 @@ import AttackerPanel from './AttackerPanel';
 import MissionModal from './MissionModal';
 import QuizPanel from './QuizPanel';
 import AchievementsPanel from './AchievementsPanel';
+import SettingsModal from './SettingsModal';
 import { quizMap } from '../data/quizzes/index.js';
 import { achievements, getUnlockedAchievements } from '../data/achievements.js';
 import { 
@@ -15,7 +16,7 @@ import {
   unlockAchievement
 } from '../lib/progressTracker.js';
 
-// Helper function definitions (moved from App.jsx)
+// Helper function definitions
 const calculateScenarioScore = (wrongAttempts, hintsUsed) => {
     if (wrongAttempts === 0 && hintsUsed === 0) {
       return 10;
@@ -26,6 +27,18 @@ const calculateScenarioScore = (wrongAttempts, hintsUsed) => {
     }
     return 0;
 };
+
+// Helper function to simulate defense alerts (for feature #1)
+const getDefenseAlertForStep = (stepId, scenarioId) => {
+    if (scenarioId === 'kerberoasting') {
+        if (stepId === 1) return "[DEFENSE] ALERT: LDAP Query pattern detected (SPN enumeration).";
+        if (stepId === 4) return "[DEFENSE] ALERT: Weak hash identified (Service account compromised).";
+    }
+    if (scenarioId === 'pass-the-hash') {
+        if (stepId === 3) return "[DEFENSE] ALERT: Unusual NTLM authentication without password detected (PtH).";
+    }
+    return null;
+}
 
 export default function SimulatorPage({ 
   scenarioId, 
@@ -45,9 +58,22 @@ export default function SimulatorPage({
   const [activeMachine, setActiveMachine] = useState('attacker');
   const [highlightedMachine, setHighlightedMachine] = useState(null);
   const [highlightedArrow, setHighlightedArrow] = useState(null);
+  
+  // NEW STATE: Feature Management
+  const [defenseHistory, setDefenseHistory] = useState([]);
+  const [credentialInventory, setCredentialInventory] = useState([]);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [customTheme, setCustomTheme] = useState(() => {
+    try {
+        return JSON.parse(localStorage.getItem('terminal_theme')) || {};
+    } catch (e) {
+        return {};
+    }
+  });
+
 
   // --- MODAL / GAME STATE ---
-  const [showMissionBriefing, setShowMissionBriefing] = useState(true); // Always show briefing when page loads
+  const [showMissionBriefing, setShowMissionBriefing] = useState(true); 
   const [showMissionDebrief, setShowMissionDebrief] = useState(false);
   const [showQuiz, setShowQuiz] = useState(false);
   const [showAchievements, setShowAchievements] = useState(false);
@@ -65,9 +91,25 @@ export default function SimulatorPage({
     return <Redirect to="/" />;
   }
   
+  // --- HANDLERS ---
+  
+  const handleUpdateTheme = (newTheme) => {
+    setCustomTheme(newTheme);
+    localStorage.setItem('terminal_theme', JSON.stringify(newTheme));
+  };
+
+  const harvestCredential = (type, username, secret) => {
+      setCredentialInventory(prev => {
+          const newCred = { id: Date.now(), type, username, secret };
+          if (prev.some(c => c.secret === secret)) return prev;
+          return [...prev, newCred];
+      });
+  };
+
   // --- Initialize/Reset State ---
   useEffect(() => {
     resetScenario();
+    setCredentialInventory([]); // Reset inventory on new scenario load
     setShowMissionBriefing(true);
     setShowMissionDebrief(false);
     setShowQuiz(false);
@@ -101,6 +143,12 @@ export default function SimulatorPage({
       { type: 'info', text: '[SYSTEM] All services running normally' },
       { type: 'info', text: '' }
     ]);
+    
+    setDefenseHistory([
+        { type: 'info', text: "[DEFENSE] Blue Team Console Online. Monitoring Domain: contoso.local" },
+        { type: 'info', text: "[DEFENSE] Active Policy: Strong Password Policy, NTLM Enabled (Legacy Support)" },
+        { type: 'info', text: "" },
+    ]);
   };
   
   // --- CORE SIMULATION LOGIC ---
@@ -125,6 +173,27 @@ export default function SimulatorPage({
         ...prev,
         { type: 'log', text: serverOutput[i] }
       ]);
+    }
+
+    // NEW: Simulate credential harvesting on certain successful steps
+    if (step.id === 4 && scenarioId === 'kerberoasting') {
+        harvestCredential('Password', 'sqlservice', 'P@ssw0rd123!');
+        harvestCredential('Password', 'iis_app', 'ServicePass2024');
+    }
+    if (step.id === 3 && scenarioId === 'asrep-roasting') {
+        harvestCredential('Hash', 'svc_backup', 'BackupHash123');
+    }
+    if (step.id === 1 && scenarioId === 'pass-the-hash') {
+        harvestCredential('Hash', 'admin', '5f4dcc3b5aa765d61d8327deb882cf99');
+    }
+
+    // NEW: Add Defense Alert after outputs are streamed
+    const defenseAlert = getDefenseAlertForStep(step.id, scenarioId);
+    if (defenseAlert) {
+        setDefenseHistory(prev => [
+            ...prev,
+            { type: 'error', text: defenseAlert } 
+        ]);
     }
 
     setHighlightedMachine(null);
@@ -261,91 +330,110 @@ export default function SimulatorPage({
   // --- RENDERING ---
   return (
     <div className="simulator-container full-page">
-      <Header 
-        title={currentScenario.title}
-        currentStep={currentStep + 1}
-        totalSteps={currentScenario.steps.length}
-        score={progress.totalScore}
-        rank={progress.rank}
-      />
-      
-      {/* NetworkMap has been moved inside GuidePanel */}
-      
-      <div className="main-layout">
-        <div className="main-content">
-          <div className="simulation-page-grid">
-            {/* COLUMN 1: Guide Panel (including the Collapsible Network Map) */}
-            <GuidePanel 
-              scenario={currentScenario}
-              currentStep={currentStep}
-              tutorialMode={tutorialMode}
-              onTutorialToggle={() => {
-                const newTutorialMode = !tutorialMode;
-                setTutorialMode(newTutorialMode);
-                setProgress(prev => ({ ...prev, tutorialMode: newTutorialMode }));
-              }}
-              highlightedMachine={highlightedMachine}
-              highlightedArrow={highlightedArrow}
-            />
-            
-            {/* COLUMN 2: Unified Terminal & Logs Panel */}
-            <AttackerPanel 
-              history={attackerHistory}
-              onCommandSubmit={handleCommandSubmit}
-              isProcessing={isProcessing}
-              network={currentScenario.network}
-              activeMachine={activeMachine}
-              onMachineChange={setActiveMachine}
-              serverHistory={serverHistory}
-              onShowHint={() => handleShowHint(currentStep)}
-              hintsAvailable={currentStep < currentScenario.steps.length}
-            />
+      {/* Settings CSS Variables are applied here */}
+      <div 
+          style={{
+              '--terminal-text': customTheme.terminalText || '',
+              '--accent-color': customTheme.accentColor || '',
+              '--terminal-bg': customTheme.terminalBg || '',
+          }}
+          className="h-full w-full flex flex-col"
+      >
+          <Header 
+            title={currentScenario.title}
+            currentStep={currentStep + 1}
+            totalSteps={currentScenario.steps.length}
+            score={progress.totalScore}
+            rank={progress.rank}
+            onOpenSettings={() => setIsSettingsOpen(true)}
+          />
+          
+          <div className="main-layout">
+            <div className="main-content">
+              <div className="simulation-page-grid">
+                {/* COLUMN 1: Guide Panel (including the Collapsible Network Map) */}
+                <GuidePanel 
+                  scenario={currentScenario}
+                  currentStep={currentStep}
+                  tutorialMode={tutorialMode}
+                  onTutorialToggle={() => {
+                    const newTutorialMode = !tutorialMode;
+                    setTutorialMode(newTutorialMode);
+                    setProgress(prev => ({ ...prev, tutorialMode: newTutorialMode }));
+                  }}
+                  highlightedMachine={highlightedMachine}
+                  highlightedArrow={highlightedArrow}
+                />
+                
+                {/* COLUMN 2: Unified Terminal & Logs Panel */}
+                <AttackerPanel 
+                  history={attackerHistory}
+                  onCommandSubmit={handleCommandSubmit}
+                  isProcessing={isProcessing}
+                  network={currentScenario.network}
+                  activeMachine={activeMachine}
+                  onMachineChange={setActiveMachine}
+                  serverHistory={serverHistory}
+                  defenseHistory={defenseHistory} 
+                  credentialInventory={credentialInventory}
+                  onShowHint={() => handleShowHint(currentStep)}
+                  hintsAvailable={currentStep < currentScenario.steps.length}
+                />
+              </div>
+            </div>
           </div>
-        </div>
+
+          {/* Modals */}
+          <MissionModal
+            isOpen={showMissionBriefing}
+            onClose={() => setShowMissionBriefing(false)}
+            type="briefing"
+            scenario={currentScenario}
+          />
+
+          <MissionModal
+            isOpen={showMissionDebrief}
+            onClose={() => {
+              setShowMissionDebrief(false);
+              setShowQuiz(true);
+            }}
+            type="debrief"
+            scenario={currentScenario}
+            stats={scenarioStats}
+            newAchievements={newAchievements}
+          />
+
+          {showQuiz && (
+            <div className="modal-backdrop">
+              <div className="modal-content quiz-modal">
+                <QuizPanel
+                  quiz={quizMap[scenarioId]}
+                  onComplete={handleQuizComplete}
+                  onSkip={() => setShowQuiz(false)}
+                />
+              </div>
+            </div>
+          )}
+
+          {showAchievements && (
+            <div className="modal-backdrop">
+              <div className="modal-content achievements-modal">
+                <AchievementsPanel
+                  unlockedAchievements={progress.unlockedAchievements}
+                  newAchievements={newAchievements}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Settings Modal */}
+          <SettingsModal 
+              isOpen={isSettingsOpen}
+              onClose={() => setIsSettingsOpen(false)}
+              currentTheme={customTheme}
+              onUpdateTheme={handleUpdateTheme}
+          />
       </div>
-
-      {/* Modals */}
-      <MissionModal
-        isOpen={showMissionBriefing}
-        onClose={() => setShowMissionBriefing(false)}
-        type="briefing"
-        scenario={currentScenario}
-      />
-
-      <MissionModal
-        isOpen={showMissionDebrief}
-        onClose={() => {
-          setShowMissionDebrief(false);
-          setShowQuiz(true);
-        }}
-        type="debrief"
-        scenario={currentScenario}
-        stats={scenarioStats}
-        newAchievements={newAchievements}
-      />
-
-      {showQuiz && (
-        <div className="modal-backdrop">
-          <div className="modal-content quiz-modal">
-            <QuizPanel
-              quiz={quizMap[scenarioId]}
-              onComplete={handleQuizComplete}
-              onSkip={() => setShowQuiz(false)}
-            />
-          </div>
-        </div>
-      )}
-
-      {showAchievements && (
-        <div className="modal-backdrop">
-          <div className="modal-content achievements-modal">
-            <AchievementsPanel
-              unlockedAchievements={progress.unlockedAchievements}
-              newAchievements={newAchievements}
-            />
-          </div>
-        </div>
-      )}
     </div>
   );
 }
