@@ -327,30 +327,28 @@ export default function GuidePanel({
                   Click on machines to view details
                 </p>
               </div>
-
-                <div className="flex-1 overflow-hidden relative">
+              
+              <div className="flex-1 overflow-hidden relative">
                 {scenario && scenario.network ? (
-                    <InteractiveNetworkMap
+                  <InteractiveNetworkMap
                     scenario={scenario}
                     currentStep={currentStep}
                     highlightedMachine={highlightedMachine}
                     highlightedArrow={highlightedArrow}
                     onNodeClick={onNodeClick}
                     progress={progress}
-                    />
+                  />
                 ) : (
-                    <div className="flex items-center justify-center h-full">
+                  <div className="flex items-center justify-center h-full">
                     <div className="text-center">
-                        <div className="text-white/40 mb-2">
+                      <div className="text-white/40 mb-2">
                         <Map className="w-12 h-12 mx-auto mb-2" />
-                        </div>
-                        <p className="text-sm text-white/60">Loading network topology...</p>
+                      </div>
+                      <p className="text-sm text-white/60">Loading network topology...</p>
                     </div>
-                    </div>
+                  </div>
                 )}
-                </div>
-
-
+              </div>
             </div>
           )}
         </div>
