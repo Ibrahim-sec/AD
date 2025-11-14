@@ -13,8 +13,9 @@ const scenarioPrerequisites = {
   'asrep-roasting': 'nmap-recon',
   'password-spraying': 'nmap-recon',
   'llmnr-poisoning': 'nmap-recon',
-  'bruteforce-lockout': 'nmap-recon', // <-- ADD THIS (Also requires nmap)
-  'kerberoasting': 'asrep-roasting', // This path still works
+  'bruteforce-lockout': 'nmap-recon',
+  'kerberoasting': 'asrep-roasting', // Path A
+  'gpp-passwords': 'asrep-roasting', // <-- ADD THIS NEW PATH (Path B)
   'bloodhound': 'kerberoasting',
   'pass-the-hash': 'bloodhound',
   'dcsync': 'pass-the-hash',
@@ -23,7 +24,6 @@ const scenarioPrerequisites = {
 
 // --- Helper Component to Render a Single Scenario Card ---
 // (This component is unchanged, so I'm omitting it for brevity)
-// ...
 function RenderScenarioCard({ scenario, allScenarios, progress, onScenarioSelect }) {
   if (!scenario) return null;
 
@@ -31,12 +31,9 @@ function RenderScenarioCard({ scenario, allScenarios, progress, onScenarioSelect
   const prerequisiteId = scenarioPrerequisites[scenario.id];
   const prerequisiteScenario = prerequisiteId ? allScenarios[prerequisiteId] : null;
 
-  // A scenario is locked if it has a prerequisite
-  // AND that prerequisite is NOT in the completed list.
   const isLocked = prerequisiteId && !progress.scenariosCompleted?.includes(prerequisiteId);
   const difficultyClass = `difficulty-${scenario.difficulty?.toLowerCase() || 'beginner'}`;
 
-  // This is the card's visual content
   const cardContent = (
     <div
       className={`scenario-card ${difficultyClass} ${isLocked ? 'is-locked' : ''}`}
@@ -75,7 +72,6 @@ function RenderScenarioCard({ scenario, allScenarios, progress, onScenarioSelect
     </div>
   );
 
-  // Render a non-clickable, grayed-out card with a tooltip if locked
   if (isLocked) {
     return (
       <Tooltip>
@@ -91,7 +87,6 @@ function RenderScenarioCard({ scenario, allScenarios, progress, onScenarioSelect
     );
   }
 
-  // Render a clickable Link if unlocked
   return (
     <Link 
       href={`/scenario/${scenario.id}`}
@@ -112,8 +107,8 @@ export default function ScenarioSelectionPage({ allScenarios, progress, customSc
   // This array defines the structure of your new UI
   const campaignTiers = [
     { title: "Phase 1: Reconnaissance", scenarios: ['nmap-recon'] },
-    { title: "Phase 2: Initial Access", scenarios: ['asrep-roasting', 'password-spraying', 'llmnr-poisoning', 'bruteforce-lockout'] }, // <-- ADDED 'bruteforce-lockout'
-    { title: "Phase 3: Escalation", scenarios: ['kerberoasting', 'bloodhound'] },
+    { title: "Phase 2: Initial Access", scenarios: ['asrep-roasting', 'password-spraying', 'llmnr-poisoning', 'bruteforce-lockout'] },
+    { title: "Phase 3: Escalation", scenarios: ['kerberoasting', 'bloodhound', 'gpp-passwords'] }, // <-- ADDED 'gpp-passwords'
     { title: "Phase 4: Lateral Movement", scenarios: ['pass-the-hash'] },
     { title: "Phase 5: Domain Dominance", scenarios: ['dcsync'] },
     { title: "Phase 6: Persistence", scenarios: ['golden-ticket'] }

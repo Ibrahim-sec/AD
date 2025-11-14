@@ -10,7 +10,8 @@ import nmapScenario from './nmap.js'; // Mission 0
 import passwordSprayScenario from './passwordspray.js';
 import llmnrScenario from './llmnr.js';
 import asrepScenario from './asrep.js'; // Mission 1A
-import bruteforceScenario from './bruteforce.js'; // <-- ADD THIS IMPORT
+import bruteforceScenario from './bruteforce.js';
+import gppScenario from './gpp.js'; // <-- ADD THIS IMPORT
 import kerberoastScenario from './kerberoast.js'; // Mission 2
 import bloodhoundScenario from './bloodhound.js'; // Mission 3
 import pthScenario from './pth.js'; // Mission 4
@@ -23,7 +24,8 @@ export const scenarios = [
   asrepScenario,
   passwordSprayScenario,
   llmnrScenario,
-  bruteforceScenario, // <-- ADD THIS
+  bruteforceScenario,
+  gppScenario, // <-- ADD THIS
   kerberoastScenario,
   bloodhoundScenario,
   pthScenario,
@@ -37,7 +39,8 @@ export const scenarioMap = {
   'asrep-roasting': asrepScenario,
   'password-spraying': passwordSprayScenario,
   'llmnr-poisoning': llmnrScenario,
-  'bruteforce-lockout': bruteforceScenario, // <-- ADD THIS
+  'bruteforce-lockout': bruteforceScenario,
+  'gpp-passwords': gppScenario, // <-- ADD THIS
   'kerberoasting': kerberoastScenario,
   'bloodhound': bloodhoundScenario,
   'pass-the-hash': pthScenario,
