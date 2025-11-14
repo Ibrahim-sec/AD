@@ -1,6 +1,6 @@
 /**
  * Pass-the-Hash (PtH) Attack Scenario
- * 
+ *
  * This scenario simulates the Pass-the-Hash attack, where an attacker uses
  * stolen NTLM hashes to authenticate without knowing the plaintext password.
  */
@@ -9,7 +9,7 @@ export const pthScenario = {
   id: 'pass-the-hash',
   title: 'Pass-the-Hash: Lateral Movement Without Passwords',
   description: 'Learn how attackers use stolen NTLM hashes to move laterally through the network.',
-  
+
   network: {
     attacker: {
       ip: '10.0.0.5',
@@ -35,7 +35,7 @@ export const pthScenario = {
 
 **Why This Matters:**
 Pass-the-Hash is extremely dangerous because it bypasses password requirements. Attackers can move laterally across the network using stolen hashes, making it a critical post-exploitation technique.`,
-    
+
     steps: [
       {
         number: 1,

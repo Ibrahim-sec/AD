@@ -74,6 +74,7 @@ export default function GuidePanel({
                     <NetworkMap 
                         highlightedMachine={highlightedMachine}
                         highlightedArrow={highlightedArrow}
+                        network={scenario.network}
                     />
                 </div>
             </CollapsibleContent>

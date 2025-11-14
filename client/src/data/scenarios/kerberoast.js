@@ -1,6 +1,6 @@
 /**
  * Kerberoasting Attack Scenario
- * 
+ *
  * This scenario simulates the Kerberoasting attack, where an attacker requests
  * service tickets for accounts with SPNs and attempts to crack them offline.
  */
@@ -9,7 +9,7 @@ export const kerberoastScenario = {
   id: 'kerberoasting',
   title: 'Kerberoasting: Service Account Credential Theft',
   description: 'Learn how attackers extract and crack service account credentials using Kerberos service tickets.',
-  
+
   network: {
     attacker: {
       ip: '10.0.0.5',
@@ -35,7 +35,7 @@ export const kerberoastScenario = {
 
 **Why This Matters:**
 Service accounts often have weak passwords and high privileges. Kerberoasting can quickly identify and compromise these accounts, leading to lateral movement and privilege escalation.`,
-    
+
     steps: [
       {
         number: 1,

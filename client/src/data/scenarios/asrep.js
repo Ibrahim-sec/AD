@@ -1,6 +1,6 @@
 /**
  * AS-REP Roasting Attack Scenario
- * 
+ *
  * This scenario simulates the AS-REP Roasting attack, targeting user accounts
  * with Kerberos pre-authentication disabled.
  */
@@ -9,7 +9,7 @@ export const asrepScenario = {
   id: 'asrep-roasting',
   title: 'AS-REP Roasting: Pre-Auth Disabled Exploitation',
   description: 'Learn how attackers exploit disabled Kerberos pre-authentication to crack user credentials.',
-  
+
   network: {
     attacker: {
       ip: '10.0.0.5',
@@ -35,7 +35,7 @@ export const asrepScenario = {
 
 **Why This Matters:**
 Pre-authentication disabled is a dangerous misconfiguration. It allows attackers to request TGTs for any user without knowing their password, making credential cracking much faster than normal Kerberos attacks.`,
-    
+
     steps: [
       {
         number: 1,

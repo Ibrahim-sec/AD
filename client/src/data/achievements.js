@@ -60,11 +60,12 @@ export const achievements = [
   {
     id: 'all-scenarios',
     title: 'Complete Arsenal',
-    description: 'Complete all four attack scenarios',
+    description: 'Complete all five attack scenarios',
     icon: '🎖️',
     points: 50,
     condition: (progress) => {
-      return progress.scenariosCompleted.length === 4;
+      // Updated: now there are five scenarios including DCSync
+      return progress.scenariosCompleted.length === 5;
     }
   },
   {

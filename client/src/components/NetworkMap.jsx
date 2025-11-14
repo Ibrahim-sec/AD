@@ -1,8 +1,14 @@
-export default function NetworkMap({ highlightedMachine, highlightedArrow }) {
+export default function NetworkMap({ highlightedMachine, highlightedArrow, network }) {
+  // Allow scenario-specific network data to override default IPs
+  const attackerIp = network?.attacker?.ip || '10.0.0.5';
+  const targetIp = network?.target?.ip || '10.0.1.10';
+  // Many scenarios do not define a separate DC IP; default to .20
+  const dcIp = network?.dc?.ip || '10.0.1.20';
+
   return (
     <div className="network-map-container">
-      <svg 
-        viewBox="0 0 800 120" 
+      <svg
+        viewBox="0 0 800 120"
         className="network-map"
         preserveAspectRatio="xMidYMid meet"
       >
@@ -13,7 +19,7 @@ export default function NetworkMap({ highlightedMachine, highlightedArrow }) {
             Attacker
           </text>
           <text x="110" y="80" textAnchor="middle" className="machine-ip">
-            10.0.0.5
+            {attackerIp}
           </text>
         </g>
 
@@ -26,14 +32,14 @@ export default function NetworkMap({ highlightedMachine, highlightedArrow }) {
           </text>
         </g>
 
-        {/* Internal Server */}
+        {/* Internal/Target Server */}
         <g className={`machine ${highlightedMachine === 'target' ? 'highlighted' : ''}`}>
           <rect x="280" y="30" width="120" height="60" rx="8" />
           <text x="340" y="65" textAnchor="middle" className="machine-label">
             Internal Server
           </text>
           <text x="340" y="80" textAnchor="middle" className="machine-ip">
-            10.0.1.10
+            {targetIp}
           </text>
         </g>
 
@@ -53,7 +59,7 @@ export default function NetworkMap({ highlightedMachine, highlightedArrow }) {
             Domain Controller
           </text>
           <text x="570" y="80" textAnchor="middle" className="machine-ip">
-            10.0.1.20
+            {dcIp}
           </text>
         </g>
       </svg>

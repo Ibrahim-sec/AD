@@ -1,6 +1,6 @@
 /**
  * BloodHound AD Reconnaissance Scenario
- * 
+ *
  * This scenario simulates using BloodHound to map Active Directory relationships
  * and identify attack paths in a corporate network.
  */
@@ -9,7 +9,7 @@ export const bloodhoundScenario = {
   id: 'bloodhound',
   title: 'BloodHound: Active Directory Reconnaissance',
   description: 'Learn how attackers use BloodHound to map AD relationships and find privilege escalation paths.',
-  
+
   // Network configuration
   network: {
     attacker: {
@@ -40,7 +40,7 @@ BloodHound can quickly identify complex attack paths that would take hours to fi
 - Kerberoastable accounts
 - Accounts with DCSync rights
 - Computers with unconstrained delegation`,
-    
+
     steps: [
       {
         number: 1,
