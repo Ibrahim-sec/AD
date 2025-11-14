@@ -50,9 +50,9 @@ BloodHound can quickly identify complex attack paths that would take hours to fi
       {
         number: 2,
         title: 'Run BloodHound Python Collector',
-        description: 'Use bloodhound-python with the compromised "sqlservice" credentials to collect AD objects via LDAP.',
-        command: 'bloodhound-python -d contoso.local -u sqlservice -p P@ssw0rd123! --zip',
-        tip: 'The --zip flag packages all collected data into a single file for easy import'
+        description: 'Use the compromised "sqlservice" credentials to collect AD objects. Find the password in your "Files" tab.',
+        command: 'bloodhound-python -d contoso.local -u sqlservice -p [PASSWORD-FROM-FILES-TAB] --zip',
+        tip: 'Check the "Files" tab for the credential you harvested in the Kerberoasting scenario.'
       },
       {
         number: 3,
@@ -86,7 +86,8 @@ BloodHound can quickly identify complex attack paths that would take hours to fi
     },
     {
       id: 2,
-      expectedCommand: 'bloodhound-python -d contoso.local -u sqlservice -p P@ssw0rd123! --zip',
+      // This now uses the LOOT variable, which your SimulatorPage will resolve
+      expectedCommand: 'bloodhound-python -d contoso.local -u sqlservice -p [LOOT:sqlservice] --zip',
       attackerOutput: [
         '[*] Initializing BloodHound Python collector',
         '[*] Connecting to contoso.local...',

