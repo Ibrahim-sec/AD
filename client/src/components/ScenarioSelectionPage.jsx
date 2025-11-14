@@ -14,11 +14,17 @@ const scenarioPrerequisites = {
   'password-spraying': 'nmap-recon',
   'llmnr-poisoning': 'nmap-recon',
   'bruteforce-lockout': 'nmap-recon',
-  'kerberoasting': 'asrep-roasting', // Path A
-  'gpp-passwords': 'asrep-roasting', // <-- ADD THIS NEW PATH (Path B)
+  
+  'kerberoasting': 'asrep-roasting', 
+  'gpp-passwords': 'asrep-roasting',
   'bloodhound': 'kerberoasting',
-  'pass-the-hash': 'bloodhound',
-  'dcsync': 'pass-the-hash',
+
+  'pass-the-hash': 'bloodhound',           // Path A to Domain Dominance
+  'ntlm-relay': 'llmnr-poisoning', // <-- ADD THIS (Path B)
+  
+  'dcsync': 'pass-the-hash', // This path requires PtH
+  // We could add another DCSync path that unlocks from 'ntlm-relay'
+  
   'golden-ticket': 'dcsync', 
 };
 
@@ -103,13 +109,12 @@ function RenderScenarioCard({ scenario, allScenarios, progress, onScenarioSelect
 export default function ScenarioSelectionPage({ allScenarios, progress, customScenarios, onScenarioSelect }) {
   const customScenariosList = customScenarios || [];
   
-  // --- NEW: Define the Tiers ---
-  // This array defines the structure of your new UI
+  // --- UPDATED Tiers Array ---
   const campaignTiers = [
     { title: "Phase 1: Reconnaissance", scenarios: ['nmap-recon'] },
     { title: "Phase 2: Initial Access", scenarios: ['asrep-roasting', 'password-spraying', 'llmnr-poisoning', 'bruteforce-lockout'] },
-    { title: "Phase 3: Escalation", scenarios: ['kerberoasting', 'bloodhound', 'gpp-passwords'] }, // <-- ADDED 'gpp-passwords'
-    { title: "Phase 4: Lateral Movement", scenarios: ['pass-the-hash'] },
+    { title: "Phase 3: Escalation", scenarios: ['kerberoasting', 'bloodhound', 'gpp-passwords'] },
+    { title: "Phase 4: Lateral Movement", scenarios: ['pass-the-hash', 'ntlm-relay'] }, // <-- ADDED 'ntlm-relay'
     { title: "Phase 5: Domain Dominance", scenarios: ['dcsync'] },
     { title: "Phase 6: Persistence", scenarios: ['golden-ticket'] }
   ];
@@ -123,7 +128,7 @@ export default function ScenarioSelectionPage({ allScenarios, progress, customSc
       
       <div className="scenarios-grid-container">
         
-        {/* --- NEW CAMPAIGN PATH UI (Horizontal Tiers) --- */}
+        {/* --- CAMPAIGN PATH UI --- */}
         <div className="scenarios-section">
           <h2 className="section-title">Campaign Attack Path</h2>
           
