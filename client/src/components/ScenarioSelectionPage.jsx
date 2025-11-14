@@ -2,6 +2,8 @@ import { scenarioMap } from '../data/scenarios/index.js';
 import { CheckCircle2, Circle, Swords } from 'lucide-react';
 import { Link } from 'wouter';
 
+
+
 export default function ScenarioSelectionPage({ allScenarios, progress, customScenarios, onScenarioSelect }) {
   const builtInScenarios = Object.values(scenarioMap) || [];
   const customScenariosList = customScenarios || [];
@@ -40,13 +42,13 @@ export default function ScenarioSelectionPage({ allScenarios, progress, customSc
                       className={`scenario-card ${difficultyClass}`}
                     >
                       <div className="scenario-header">
-                        <h3 className="scenario-title">{scenario.name || scenario.title}</h3>
+                        <h3 className="scenario-title">{scenario.name}</h3>
                         <span className={`difficulty-badge ${difficultyClass}`}>
                           {scenario.difficulty || 'Beginner'}
                         </span>
                       </div>
                       
-                      <p className="scenario-description">{scenario.description || scenario.mission.objective}</p>
+                      <p className="scenario-description">{scenario.mission?.objective}</p>
 
                       <div className="scenario-footer">
                           <span className="step-count">
