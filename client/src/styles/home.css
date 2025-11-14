@@ -41,72 +41,75 @@
 .section-title {
   color: #58a6ff;
   font-size: 14px;
-  margin: 0 0 10px 0;
+  margin: 0 0 16px 0; /* Increased bottom margin */
   padding: 5px 0;
   border-bottom: 1px solid #58a6ff;
 }
 
 /* ===================================
-   NEW CAMPAIGN PATH STYLES
+   NEW CAMPAIGN PATH STYLES (Horizontal Tiers)
    =================================== */
 
-.campaign-container {
+.campaign-container-vertical {
   display: flex;
-  flex-direction: row;
-  gap: 16px;
-  overflow-x: auto; /* This makes it scroll horizontally */
-  padding: 16px 4px 20px 4px; /* Space for the scrollbar and cards */
-  background: var(--terminal-bg);
-  border-radius: 8px;
-  border: 1px solid var(--border-color);
+  flex-direction: column;
+  gap: 24px; /* Space between each phase row */
 }
 
-/* Custom scrollbar for the campaign container */
-.campaign-container::-webkit-scrollbar {
-  height: 10px;
-}
-.campaign-container::-webkit-scrollbar-thumb {
-  background: var(--accent-color);
-  border-radius: 5px;
-  border: 2px solid var(--terminal-bg);
-}
-.campaign-container::-webkit-scrollbar-track {
-  background: var(--terminal-bg);
-}
-
-.campaign-tier {
-  flex: 0 0 300px; /* Each column is 300px wide */
+.campaign-tier-horizontal {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  /* This ensures the tier itself doesn't scroll, the container does */
-  overflow: visible; 
+  background: var(--terminal-bg);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  padding: 16px;
 }
 
 .tier-title {
   font-size: 16px;
   font-weight: 600;
   color: var(--accent-color);
-  text-align: center;
   border-bottom: 1px solid var(--border-color);
   padding-bottom: 10px;
-  margin: 0 10px;
+  margin: 0;
   white-space: nowrap;
 }
 
-.campaign-connector {
+.tier-scenarios-row {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  color: var(--border-color);
-  opacity: 0.5;
+  flex-direction: row;
+  gap: 16px;
+  overflow-x: auto; /* This makes the scenarios scroll horizontally */
+  padding: 4px 4px 16px 4px; /* Space for scrollbar */
+}
+
+/* This is the scenario card *inside* the tier */
+.tier-scenarios-row .scenario-card-link,
+.tier-scenarios-row .locked-card-wrapper {
+  flex: 0 0 300px; /* Each card is 300px wide */
+  width: 300px;
+}
+
+/* Custom scrollbar for the scenario row */
+.tier-scenarios-row::-webkit-scrollbar {
+  height: 10px;
+}
+.tier-scenarios-row::-webkit-scrollbar-thumb {
+  background: var(--accent-color);
+  border-radius: 5px;
+  border: 2px solid var(--terminal-bg);
+}
+.tier-scenarios-row::-webkit-scrollbar-track {
+  background: var(--terminal-bg);
+  border-radius: 8px;
 }
 
 /* ===================================
-   Scenario Card Styles
+   Scenario Card Styles (Shared)
    =================================== */
 
+/* This grid is for the "Custom Scenarios" section */
 .scenarios-list-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -118,7 +121,7 @@
     flex-direction: column;
     gap: 10px;
     padding: 20px;
-    background: var(--terminal-bg);
+    background: var(--guide-bg); /* Use guide-bg so it stands out from tier-bg */
     border: 2px solid var(--border-color);
     border-radius: 8px;
     cursor: pointer;
@@ -126,7 +129,7 @@
     text-decoration: none;
     color: inherit;
     font-family: inherit;
-    min-height: 180px;
+    min-height: 200px; /* Increased min-height */
 }
 
 .scenario-card:hover {
@@ -214,7 +217,7 @@
 }
 
 .scenario-card.is-locked {
-  background: var(--terminal-bg);
+  background: var(--guide-bg);
   border-color: var(--border-color);
   /* Make it feel disabled */
   filter: grayscale(80%);

@@ -1,11 +1,11 @@
 import { scenarioMap } from '../data/scenarios/index.js';
-import { CheckCircle2, Circle, Swords, Lock, ChevronRight } from 'lucide-react';
+import { CheckCircle2, Circle, Swords, Lock } from 'lucide-react';
 import { Link } from 'wouter';
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from "@/components/ui/tooltip"; // Import the Tooltip components
+} from "@/components/ui/tooltip"; // We need this for locked scenarios
 
 // This defines the logical attack chain.
 // To unlock a scenario (key), the user must have completed the prerequisite (value).
@@ -17,12 +17,11 @@ const scenarioPrerequisites = {
   'bloodhound': 'kerberoasting',
   'pass-the-hash': 'bloodhound',
   'dcsync': 'pass-the-hash',
-  'golden-ticket': 'dcsync', // <-- ADD THIS
+  'golden-ticket': 'dcsync', 
 };
 
 // --- Helper Component to Render a Single Scenario Card ---
-// (This component is unchanged, so I'm omitting it for brevity)
-// ...
+// This avoids duplicating code and keeps the main component clean
 function RenderScenarioCard({ scenario, allScenarios, progress, onScenarioSelect }) {
   if (!scenario) return null;
 
@@ -30,6 +29,8 @@ function RenderScenarioCard({ scenario, allScenarios, progress, onScenarioSelect
   const prerequisiteId = scenarioPrerequisites[scenario.id];
   const prerequisiteScenario = prerequisiteId ? allScenarios[prerequisiteId] : null;
 
+  // A scenario is locked if it has a prerequisite
+  // AND that prerequisite is NOT in the completed list.
   const isLocked = prerequisiteId && !progress.scenariosCompleted?.includes(prerequisiteId);
   const difficultyClass = `difficulty-${scenario.difficulty?.toLowerCase() || 'beginner'}`;
 
@@ -105,6 +106,17 @@ function RenderScenarioCard({ scenario, allScenarios, progress, onScenarioSelect
 export default function ScenarioSelectionPage({ allScenarios, progress, customScenarios, onScenarioSelect }) {
   const customScenariosList = customScenarios || [];
   
+  // --- NEW: Define the Tiers ---
+  // This array defines the structure of your new UI
+  const campaignTiers = [
+    { title: "Phase 1: Reconnaissance", scenarios: ['nmap-recon'] },
+    { title: "Phase 2: Initial Access", scenarios: ['asrep-roasting', 'password-spraying', 'llmnr-poisoning'] },
+    { title: "Phase 3: Escalation", scenarios: ['kerberoasting', 'bloodhound'] },
+    { title: "Phase 4: Lateral Movement", scenarios: ['pass-the-hash'] },
+    { title: "Phase 5: Domain Dominance", scenarios: ['dcsync'] },
+    { title: "Phase 6: Persistence", scenarios: ['golden-ticket'] }
+  ];
+
   return (
     <div className="scenario-selection-page">
       <div className="selector-header">
@@ -114,122 +126,39 @@ export default function ScenarioSelectionPage({ allScenarios, progress, customSc
       
       <div className="scenarios-grid-container">
         
-        {/* --- NEW CAMPAIGN PATH UI --- */}
+        {/* --- NEW CAMPAIGN PATH UI (Horizontal Tiers) --- */}
         <div className="scenarios-section">
           <h2 className="section-title">Campaign Attack Path</h2>
-          <div className="campaign-container">
-            
-            {/* TIER 1: RECONNAISSANCE */}
-            <div className="campaign-tier">
-              <h3 className="tier-title">Phase 1: Reconnaissance</h3>
-              <RenderScenarioCard
-                scenario={allScenarios['nmap-recon']}
-                allScenarios={allScenarios}
-                progress={progress}
-                onScenarioSelect={onScenarioSelect}
-              />
-            </div>
-            
-            <div className="campaign-connector">
-              <ChevronRight size={48} />
-            </div>
+          
+          <div className="campaign-container-vertical">
+            {campaignTiers.map(tier => {
+              // Check if any scenarios in this tier are visible
+              const scenariosInTier = tier.scenarios.map(id => allScenarios[id]).filter(Boolean);
+              if (scenariosInTier.length === 0) return null;
 
-            {/* TIER 2: INITIAL ACCESS */}
-            <div className="campaign-tier">
-              <h3 className="tier-title">Phase 2: Initial Access</h3>
-              <RenderScenarioCard
-                scenario={allScenarios['asrep-roasting']}
-                allScenarios={allScenarios}
-                progress={progress}
-                onScenarioSelect={onScenarioSelect}
-              />
-              <RenderScenarioCard
-                scenario={allScenarios['password-spraying']}
-                allScenarios={allScenarios}
-                progress={progress}
-                onScenarioSelect={onScenarioSelect}
-              />
-              <RenderScenarioCard
-                scenario={allScenarios['llmnr-poisoning']}
-                allScenarios={allScenarios}
-                progress={progress}
-                onScenarioSelect={onScenarioSelect}
-              />
-            </div>
-            
-            <div className="campaign-connector">
-              <ChevronRight size={48} />
-            </div>
-
-            {/* TIER 3: ESCALATION */}
-            <div className="campaign-tier">
-              <h3 className="tier-title">Phase 3: Escalation</h3>
-              <RenderScenarioCard
-                scenario={allScenarios['kerberoasting']}
-                allScenarios={allScenarios}
-                progress={progress}
-                onScenarioSelect={onScenarioSelect}
-              />
-              <RenderScenarioCard
-                scenario={allScenarios['bloodhound']}
-                allScenarios={allScenarios}
-                progress={progress}
-                onScenarioSelect={onScenarioSelect}
-              />
-            </div>
-
-            <div className="campaign-connector">
-              <ChevronRight size={48} />
-            </div>
-
-            {/* TIER 4: LATERAL MOVEMENT */}
-            <div className="campaign-tier">
-              <h3 className="tier-title">Phase 4: Lateral Movement</h3>
-              <RenderScenarioCard
-                scenario={allScenarios['pass-the-hash']}
-                allScenarios={allScenarios}
-                progress={progress}
-                onScenarioSelect={onScenarioSelect}
-              />
-            </div>
-
-            <div className="campaign-connector">
-              <ChevronRight size={48} />
-            </div>
-
-            {/* TIER 5: DOMAIN DOMINANCE */}
-            <div className="campaign-tier">
-              <h3 className="tier-title">Phase 5: Domain Dominance</h3>
-              <RenderScenarioCard
-                scenario={allScenarios['dcsync']}
-                allScenarios={allScenarios}
-                progress={progress}
-                onScenarioSelect={onScenarioSelect}
-              />
-            </div>
-
-            {/* --- NEW: TIER 6 --- */}
-            <div className="campaign-connector">
-              <ChevronRight size={48} />
-            </div>
-            
-            <div className="campaign-tier">
-              <h3 className="tier-title">Phase 6: Persistence</h3>
-              <RenderScenarioCard
-                scenario={allScenarios['golden-ticket']}
-                allScenarios={allScenarios}
-                progress={progress}
-                onScenarioSelect={onScenarioSelect}
-              />
-            </div>
-            {/* --- END OF NEW TIER --- */}
-
+              return (
+                <div key={tier.title} className="campaign-tier-horizontal">
+                  <h3 className="tier-title">{tier.title}</h3>
+                  <div className="tier-scenarios-row">
+                    {scenariosInTier.map(scenario => (
+                      <RenderScenarioCard
+                        key={scenario.id}
+                        scenario={scenario}
+                        allScenarios={allScenarios}
+                        progress={progress}
+                        onScenarioSelect={onScenarioSelect}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )
+            })}
           </div>
         </div>
         {/* --- END CAMPAIGN PATH UI --- */}
 
 
-        {/* --- CUSTOM SCENARIOS (Still in a grid) --- */}
+        {/* --- CUSTOM SCENARIOS (Now uses the grid) --- */}
         {customScenariosList.length > 0 && (
           <div className="scenarios-section">
             <h2 className="section-title">Custom Scenarios</h2>
