@@ -15,7 +15,6 @@ import {
   addQuizScore,
   unlockAchievement
 } from '../lib/progressTracker.js';
-// ADD THIS IMPORT
 import { safeGetItem, safeSetItem } from '../lib/safeStorage.js';
 
 // Helper function definitions
@@ -30,7 +29,6 @@ const calculateScenarioScore = (wrongAttempts, hintsUsed) => {
     return 0;
 };
 
-// Helper function to simulate defense alerts (for feature #1)
 const getDefenseAlertForStep = (stepId, scenarioId) => {
     if (scenarioId === 'kerberoasting') {
         if (stepId === 1) return "[DEFENSE] ALERT: LDAP Query pattern detected (SPN enumeration).";
@@ -61,10 +59,12 @@ export default function SimulatorPage({
   const [highlightedMachine, setHighlightedMachine] = useState(null);
   const [highlightedArrow, setHighlightedArrow] = useState(null);
   
-  // NEW STATE: Feature Management
+  // --- MODIFIED: Loot & File System State ---
   const [defenseHistory, setDefenseHistory] = useState([]);
   const [credentialInventory, setCredentialInventory] = useState([]);
-  const [simulatedFiles, setSimulatedFiles] = useState([]); // [1] NEW STATE FOR FILES
+  const [simulatedFiles, setSimulatedFiles] = useState([]);
+  const [simulatedFileSystem, setSimulatedFileSystem] = useState({}); // NEW: Holds loot *before* it's downloaded
+  
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [customTheme, setCustomTheme] = useState(() => {
     try {
@@ -76,13 +76,9 @@ export default function SimulatorPage({
 
   
   // --- MODAL / GAME STATE ---
-  
-  // MODIFICATION 1: Make useState check localStorage
   const briefingStorageKey = `hasSeenBriefing_${scenarioId}`;
   const [showMissionBriefing, setShowMissionBriefing] = useState(() => {
-    // Read from storage. Default to `null` if not found.
     const hasSeen = safeGetItem(briefingStorageKey, null);
-    // Show the modal only if `hasSeen` is NOT true.
     return hasSeen !== true;
   }); 
   
@@ -118,14 +114,13 @@ export default function SimulatorPage({
       });
   };
 
-  // [2] NEW FILE STATE RESET
   // --- Initialize/Reset State ---
   useEffect(() => {
     resetScenario();
-    setCredentialInventory([]); // Reset inventory on new scenario load
-    setSimulatedFiles([]); // Reset files on new scenario load
+    setCredentialInventory([]); 
+    setSimulatedFiles([]);
+    setSimulatedFileSystem({}); // NEW: Reset simulated file system
     
-    // MODIFICATION: Check storage key to decide if briefing should be shown on scenario load
     const hasSeen = safeGetItem(briefingStorageKey, null);
     setShowMissionBriefing(hasSeen !== true);
 
@@ -137,19 +132,15 @@ export default function SimulatorPage({
       startTime: Date.now()
     });
     setHintsShown({});
-  }, [scenarioId, briefingStorageKey]); // Add briefingStorageKey to dependency array
+  }, [scenarioId, briefingStorageKey]); 
 
-  // Automatically process steps that have no expected command. When a step's expectedCommand is null,
-  // there is no user input required; instead we immediately run the step's outputs. This effect watches
-  // the current step and triggers processing for informational steps without requiring a command.
+  // Auto-advances steps with expectedCommand: null
   useEffect(() => {
     const step = currentScenario?.steps[currentStep];
     if (step && step.expectedCommand == null && !isProcessing) {
-      // Auto-advance steps with no expected command (information-only)
       setIsProcessing(true);
       processStepOutput(step);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentStep, currentScenario, isProcessing]);
 
   const resetScenario = () => {
@@ -184,7 +175,8 @@ export default function SimulatorPage({
   
   // --- CORE SIMULATION LOGIC ---
   
-  // [3] UPDATED FUNCTION
+  // --- [ MODIFICATION 1: UPDATED processStepOutput ] ---
+  // Replaced hardcoded `if (scenarioId === ...)` with a generic `lootToGrant` system.
   const processStepOutput = async (step) => {
     const { attackerOutput, serverOutput, delay } = step;
 
@@ -207,36 +199,31 @@ export default function SimulatorPage({
       ]);
     }
 
-    // --- NEW: Simulate file/credential harvesting on certain successful steps ---
-    if (step.id === 2 && scenarioId === 'bloodhound') {
-        setSimulatedFiles(prev => [...prev, { id: 'bh', name: 'BH.zip', size: '2.3 MB' }]);
+    // --- NEW GENERIC LOOT SYSTEM ---
+    // This block replaces the old hardcoded `if (scenarioId === ...)` checks
+    if (step.lootToGrant) {
+      // Grant files to the *simulated file system* (not the Files tab)
+      if (step.lootToGrant.files) {
+        setSimulatedFileSystem(prev => ({
+          ...prev,
+          ...step.lootToGrant.files
+        }));
+      }
+      // Grant credentials (passwords/hashes)
+      if (step.lootToGrant.creds) {
+        step.lootToGrant.creds.forEach(cred => {
+          harvestCredential(cred.type, cred.username, cred.secret);
+        });
+      }
+      // Grant files directly to the "Files" tab (for `download` commands)
+      if (step.lootToGrant.download) {
+        step.lootToGrant.download.forEach(file => {
+          setSimulatedFiles(prev => [...prev, file]);
+        });
+      }
     }
-    if (step.id === 3 && scenarioId === 'kerberoasting') {
-        setSimulatedFiles(prev => [...prev, { id: 'kb', name: 'kerberoast_hashes.txt', size: '8 KB' }]);
-    }
-    if (step.id === 4 && scenarioId === 'kerberoasting') {
-        harvestCredential('Password', 'sqlservice', 'P@ssw0rd123!');
-        harvestCredential('Password', 'iis_app', 'ServicePass2024');
-    }
-    if (step.id === 2 && scenarioId === 'asrep-roasting') {
-        setSimulatedFiles(prev => [...prev, { id: 'asrep', name: 'asrep_hashes.txt', size: '4 KB' }]);
-    }
-    if (step.id === 3 && scenarioId === 'asrep-roasting') {
-        // --- THIS IS THE BUG FIX ---
-        harvestCredential('Password', 'svc_backup', 'BackupPass123'); // Was 'Hash'
-        harvestCredential('Password', 'svc_test', 'TestUser2024'); // Also add this one
-        harvestCredential('Password', 'legacy_app', 'LegacyApp!'); // Also add this one
-    }
-    if (step.id === 2 && scenarioId === 'pass-the-hash') { // This is now Step 2
-        harvestCredential('Hash', 'admin', '5f4dcc3b5aa765d61d8327deb882cf99');
-    }
-    if (step.id === 1 && scenarioId === 'dcsync') { // This is now Step 1
-        harvestCredential('Hash', 'krbtgt', 'ffffffffffffffffffffffffffffffff');
-    }
-    // --- End of new harvesting logic ---
+    // --- END NEW LOOT SYSTEM ---
 
-
-    // NEW: Add Defense Alert after outputs are streamed
     const defenseAlert = getDefenseAlertForStep(step.id, scenarioId);
     if (defenseAlert) {
         setDefenseHistory(prev => [
@@ -259,6 +246,7 @@ export default function SimulatorPage({
 
 
   const completeScenario = () => {
+    // ... (This function is unchanged)
     const timeSpent = Math.round((Date.now() - scenarioStats.startTime) / 1000);
     const scoreEarned = calculateScenarioScore(scenarioStats.wrongAttempts, scenarioStats.hintsUsed);
     
@@ -295,46 +283,75 @@ export default function SimulatorPage({
     }));
   };
 
-  // --- [ MODIFICATION 2: "Loot-Gated" Command Logic ] ---
-  // This function replaces variables like [LOOT:username] with the real secret.
   const resolveLootVariables = (commandString) => {
     const lootRegex = /\[loot:([^\]]+)\]/gi;
     let resolvedCmd = commandString;
 
-    // Find all [LOOT:...] placeholders
     const matches = commandString.match(lootRegex);
     if (!matches) {
-      return commandString; // No variables, return as-is
+      return commandString;
     }
 
     for (const match of matches) {
-      // Get the username from inside the tag (e.g., "svc_backup")
       const usernameToFind = match.replace(lootRegex, '$1').toLowerCase();
-      
-      // Find the credential in our inventory
       const foundCred = credentialInventory.find(
         (c) => c.username.toLowerCase() === usernameToFind
       );
 
       if (foundCred) {
-        // Replace the placeholder with the actual secret
         resolvedCmd = resolvedCmd.replace(match, foundCred.secret);
       } else {
-        // If user doesn't have the loot, the command will fail
-        // We replace it with a "dummy" value to ensure the check fails
         resolvedCmd = resolvedCmd.replace(match, "LOOT_NOT_FOUND");
       }
     }
     return resolvedCmd;
   };
 
+  // --- [ MODIFICATION 2: UPDATED handleCommandSubmit ] ---
+  // This now checks for 'dir', 'ls', 'cat', 'type' before checking the step command.
   const handleCommandSubmit = (command) => {
-    // Always echo the command in the attacker terminal for realism
+    const normalizedInput = command.trim().toLowerCase();
+    
+    // Always echo the command
     setAttackerHistory(prev => [
       ...prev,
       { type: 'command', text: `root@${currentScenario.network.attacker.hostname}:~# ${command}` }
     ]);
 
+    // --- NEW: Interactive File System Commands (Pre-check) ---
+    // These commands do NOT advance the step.
+    if (normalizedInput === 'ls' || normalizedInput === 'dir') {
+      const files = Object.keys(simulatedFileSystem);
+      if (files.length === 0) {
+        setAttackerHistory(prev => [
+          ...prev, { type: 'output', text: 'No files found.' }
+        ]);
+      } else {
+        const fileList = files.map(file => `[File] ${file}`);
+        setAttackerHistory(prev => [
+          ...prev, { type: 'output', text: fileList.join('\n') }
+        ]);
+      }
+      return; // Do not proceed to step check
+    }
+
+    if (normalizedInput.startsWith('cat ') || normalizedInput.startsWith('type ')) {
+      const fileName = command.split(' ')[1];
+      const file = simulatedFileSystem[fileName.toLowerCase()];
+      if (file) {
+        setAttackerHistory(prev => [
+          ...prev, { type: 'output', text: file.content }
+        ]);
+      } else {
+        setAttackerHistory(prev => [
+          ...prev, { type: 'error', text: `[!] File not found: ${fileName}` }
+        ]);
+      }
+      return; // Do not proceed to step check
+    }
+    // --- End of new pre-checks ---
+
+    // Standard step validation logic
     const step = currentScenario.steps[currentStep];
     if (!step) {
       setAttackerHistory(prev => [
@@ -344,33 +361,22 @@ export default function SimulatorPage({
       return;
     }
 
-    // Support an array of acceptable commands
     const expectedList = Array.isArray(step.expectedCommands) && step.expectedCommands.length > 0
       ? step.expectedCommands
       : step.expectedCommand
         ? [step.expectedCommand]
         : [];
 
-    const normalizedInput = command.trim().toLowerCase();
-    
-    // --- THIS IS THE NEW LOGIC ---
     const isMatch = expectedList.some(cmd => {
       if (!cmd) return false;
-      
-      // 1. Resolve any [LOOT:...] variables in the expected command
       const resolvedCmd = resolveLootVariables(cmd.trim().toLowerCase());
-
-      // 2. Compare the user's input to the resolved command
       return normalizedInput === resolvedCmd;
     });
-    // --- END NEW LOGIC ---
 
-    // If the input does not match any expected command, handle mistakes and hints
+    // If the input does not match any expected command...
     if (!isMatch) {
-      // Increment wrong attempt count
       setScenarioStats(prev => ({ ...prev, wrongAttempts: prev.wrongAttempts + 1 }));
 
-      // Check if this incorrect input matches any known common mistakes defined in the scenario step
       const mistakes = Array.isArray(step.commonMistakes) ? step.commonMistakes : [];
       let handledMistake = false;
       for (const mistake of mistakes) {
@@ -385,25 +391,21 @@ export default function SimulatorPage({
             ]);
             break;
           }
-        } catch (err) {
-          // If pattern is invalid, ignore gracefully
-        }
+        } catch (err) { /* ignore */ }
       }
 
-      // If not handled by a specific mistake, fall back to tutorial hints or generic suggestion
       if (!handledMistake) {
         if (tutorialMode) {
-          // Tutorial mode does not relax the command requirements; it still expects
-          // an exact match. This branch provides an additional hint when the user enters
-          // an incorrect command.
           setAttackerHistory(prev => [
             ...prev,
             { type: 'error', text: `[!] Not quite right. Hint: ${step.hintShort || 'Try again'}` }
           ]);
         } else {
-          // Resolve the *first* expected command to show a helpful suggestion
           const firstExpectedCmd = expectedList.length > 0 ? resolveLootVariables(expectedList[0]) : '';
-          const suggestion = firstExpectedCmd ? `Did you mean: ${firstExpectedCmd}?` : '';
+          // Don't show the full resolved command if it's a "download" or "note" command
+          const suggestion = (firstExpectedCmd && !firstExpectedCmd.startsWith('download') && !firstExpectedCmd.startsWith('note'))
+            ? `Did you mean: ${firstExpectedCmd}?` 
+            : '';
           setAttackerHistory(prev => [
             ...prev,
             { type: 'error', text: `[!] Command not recognized or incorrect for this step.` },
@@ -414,12 +416,13 @@ export default function SimulatorPage({
       return;
     }
 
-    // If we reach here, the command was correct; proceed to process the step
+    // If we reach here, the command was correct
     setIsProcessing(true);
     processStepOutput(step);
   };
   
   const handleShowHint = (stepIndex) => {
+    // ... (This function is unchanged)
     const step = currentScenario.steps[stepIndex];
     if (!step) return;
 
@@ -442,6 +445,7 @@ export default function SimulatorPage({
   };
 
   const handleQuizComplete = (quizStats) => {
+    // ... (This function is unchanged)
     let updatedProgress = { ...progress };
     updatedProgress = addQuizScore(
       updatedProgress,
@@ -456,7 +460,6 @@ export default function SimulatorPage({
     setShowQuiz(false);
   };
   
-  // MODIFICATION: Create a handler to set the localStorage flag on close
   const handleCloseBriefing = () => {
     setShowMissionBriefing(false);
     safeSetItem(briefingStorageKey, true);
@@ -465,7 +468,6 @@ export default function SimulatorPage({
   // --- RENDERING ---
   return (
     <div className="simulator-container full-page">
-      {/* Settings CSS Variables are applied here */}
       <div 
           style={{
               '--terminal-text': customTheme.terminalText || '',
@@ -486,7 +488,6 @@ export default function SimulatorPage({
           <div className="main-layout">
             <div className="main-content">
               <div className="simulation-page-grid">
-                {/* COLUMN 1: Guide Panel (including the Collapsible Network Map) */}
                 <GuidePanel 
                   scenario={currentScenario}
                   currentStep={currentStep}
@@ -498,12 +499,9 @@ export default function SimulatorPage({
                   }}
                   highlightedMachine={highlightedMachine}
                   highlightedArrow={highlightedArrow}
-                  // MODIFICATION: Add prop to re-open the briefing
                   onShowBriefing={() => setShowMissionBriefing(true)}
                 />
                 
-                {/* [4] PASSING NEW PROPS */}
-                {/* COLUMN 2: Unified Terminal & Logs Panel */}
                 <AttackerPanel 
                   history={attackerHistory}
                   onCommandSubmit={handleCommandSubmit}
@@ -525,7 +523,6 @@ export default function SimulatorPage({
           {/* Modals */}
           <MissionModal
             isOpen={showMissionBriefing}
-            // MODIFICATION: Use the new close handler
             onClose={handleCloseBriefing}
             type="briefing"
             scenario={currentScenario}
@@ -535,8 +532,6 @@ export default function SimulatorPage({
             isOpen={showMissionDebrief}
             onClose={() => {
               setShowMissionDebrief(false);
-              
-              // --- THIS IS THE BUG FIX from last time ---
               if (quizMap[scenarioId]) {
                 setShowQuiz(true);
               }
@@ -570,7 +565,6 @@ export default function SimulatorPage({
             </div>
           )}
 
-          {/* Settings Modal */}
           <SettingsModal 
               isOpen={isSettingsOpen}
               onClose={() => setIsSettingsOpen(false)}

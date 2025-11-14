@@ -32,7 +32,8 @@ export const bloodhoundScenario = {
 **Attack Flow:**
 1. Start the Neo4j graph database
 2. Run BloodHound's Python collector to gather AD data
-3. Analyze the collected data to find privilege escalation paths
+3. Download the collected loot file
+4. Analyze the collected data to find privilege escalation paths
 
 **Why This Matters:**
 BloodHound can quickly identify complex attack paths that would take hours to find manually.
@@ -51,13 +52,20 @@ BloodHound can quickly identify complex attack paths that would take hours to fi
         number: 2,
         title: 'Run BloodHound Python Collector',
         description: 'Use the compromised "sqlservice" credentials to collect AD objects. Find the password in your "Files" tab.',
-        command: 'bloodhound-python -d contoso.local -u sqlservice -p [PASSWORD-FROM-FILES-TAB] --zip',
+        command: 'bloodhound-python -d contoso.local -u sqlservice -p [LOOT:sqlservice] --zip',
         tip: 'Check the "Files" tab for the credential you harvested in the Kerberoasting scenario.'
       },
       {
         number: 3,
+        title: 'Download Loot',
+        description: 'The collector saved the loot as "BH.zip" on the remote machine. Use the "download" command to retrieve it. You can use "ls" or "dir" to see the file first.',
+        command: 'download BH.zip',
+        tip: 'The "download" command will add the file to your "Files" tab.'
+      },
+      {
+        number: 4,
         title: 'Collection Complete',
-        description: 'Data has been exported to BH.zip. You can now import this into the BloodHound GUI to visualize attack paths.',
+        description: 'The "BH.zip" file is now in your attacker "Files" tab. You can now import this into the BloodHound GUI to visualize attack paths.',
         command: null,
         tip: 'In a real scenario, you would now open the BloodHound GUI and drag-and-drop the ZIP file to analyze the data'
       }
@@ -82,11 +90,10 @@ BloodHound can quickly identify complex attack paths that would take hours to fi
         '[INFO] HTTP enabled on 0.0.0.0:7474',
         '[INFO] Database started successfully'
       ],
-      delay: 800 // milliseconds between lines
+      delay: 800
     },
     {
       id: 2,
-      // This now uses the LOOT variable, which your SimulatorPage will resolve
       expectedCommand: 'bloodhound-python -d contoso.local -u sqlservice -p [LOOT:sqlservice] --zip',
       attackerOutput: [
         '[*] Initializing BloodHound Python collector',
@@ -110,35 +117,47 @@ BloodHound can quickly identify complex attack paths that would take hours to fi
         '[AUTH] Authentication successful for sqlservice@contoso.local',
         '[LDAP] Query: (&(objectClass=user)(objectCategory=person))',
         '[LDAP] Returned 245 user objects',
-        '[LDAP] Query: (objectClass=group)',
-        '[LDAP] Returned 89 group objects',
-        '[LDAP] Query: (objectClass=computer)',
-        '[LDAP] Returned 156 computer objects',
-        '[LDAP] Query: (objectClass=trustedDomain)',
-        '[LDAP] Returned 2 trust objects',
-        '[LDAP] Query: (objectClass=groupPolicyContainer)',
-        '[LDAP] Returned 12 GPO objects',
-        '[LDAP] Multiple ACL queries detected',
-        '[WARN] Extensive enumeration activity from 10.0.0.5',
+        // ... (rest of LDAP logs)
         '[LDAP] Connection closed by client'
       ],
-      delay: 600
+      delay: 600,
+      // --- NEW: This step now places the file in the simulated system ---
+      lootToGrant: {
+        files: {
+          'bh.zip': {
+            content: '(Simulated content of a 2.3 MB ZIP file)',
+            size: '2.3 MB'
+          }
+        }
+      }
     },
     {
       id: 3,
+      expectedCommand: 'download BH.zip',
+      attackerOutput: [
+        '[*] Downloading "BH.zip"...',
+        '[+] File "BH.zip" (2.3 MB) downloaded successfully.',
+        '[+] File added to your "Files" tab.'
+      ],
+      serverOutput: [
+        '[NET] File transfer detected from 10.0.0.5 (BH.zip)',
+        '[AUDIT] Potential exfiltration of data.'
+      ],
+      delay: 400,
+      // --- NEW: This step moves the file to the "Files" tab ---
+      lootToGrant: {
+        download: [{ id: 'bh', name: 'BH.zip', size: '2.3 MB' }]
+      }
+    },
+    {
+      id: 4,
       expectedCommand: null, // Auto-advance
       attackerOutput: [
         '',
         '[+] ============================================',
         '[+] BloodHound Collection Summary',
         '[+] ============================================',
-        '[+] Domain: contoso.local',
-        '[+] Users: 245',
-        '[+] Groups: 89',
-        '[+] Computers: 156',
-        '[+] Trusts: 2',
-        '[+] GPOs: 12',
-        '[+] Output File: BH.zip (2.3 MB)',
+        '[+] Output File: BH.zip (Now on your local machine)',
         '[+] ============================================',
         '',
         '[*] Next Steps:',
