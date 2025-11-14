@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { BookOpen, Lightbulb, Terminal, ChevronDown, Network, Target } from 'lucide-react';
+// MODIFICATION 1: Add 'Target' icon
+import { BookOpen, Lightbulb, Terminal, ChevronDown, Network, Target } from 'lucide-react'; 
 import { Streamdown } from 'streamdown';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import NetworkMap from './NetworkMap';
@@ -27,11 +28,9 @@ export default function GuidePanel({
   onTutorialToggle,
   highlightedMachine,
   highlightedArrow,
-  onShowBriefing
+  onShowBriefing // MODIFICATION 2: Accept the new prop
 }) {
-  // *** THIS IS THE FIX ***
-  // Destructure BOTH guide and network from the scenario prop
-  const { guide, network } = scenario; 
+  const { guide } = scenario;
   const currentGuideStep = guide.steps[currentStep];
 
   // State for Network Map collapse
@@ -77,7 +76,6 @@ export default function GuidePanel({
                     <NetworkMap 
                         highlightedMachine={highlightedMachine}
                         highlightedArrow={highlightedArrow}
-                        network={network} {/* This will now correctly receive the network object */}
                     />
                 </div>
             </CollapsibleContent>
@@ -94,9 +92,10 @@ export default function GuidePanel({
                     <BookOpen size={20} />
                     <h2 className="!text-sm !font-medium flex-1">Attack Guide</h2>
                     
-                    {/* Container for the buttons */}
+                    {/* MODIFICATION 3: Add a container for the buttons */}
+                    {/* This div groups the new Briefing button and the Tutorial toggle */}
                     <div className="flex items-center gap-2 absolute right-10"> 
-                        {/* Briefing Button */}
+                        {/* New Briefing Button */}
                         {onShowBriefing && (
                           <button 
                               className="tutorial-toggle" // Reuse tutorial-toggle style
