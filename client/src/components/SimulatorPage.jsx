@@ -1,7 +1,11 @@
 // client/src/components/SimulatorPage.jsx
+// Complete version with ALL imports and dependencies
 
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { Link } from 'wouter';
+import { Activity, AlertTriangle } from 'lucide-react';
+
+// Component imports
 import Header from './Header';
 import GuidePanel from './GuidePanel';
 import AttackerPanel from './AttackerPanel';
@@ -11,20 +15,25 @@ import AchievementsPanel from './AchievementsPanel';
 import SettingsModal from './SettingsModal';
 import InteractiveNetworkMap from './InteractiveNetworkMap';
 import MachineInfoSheet from './MachineInfoSheet';
+
+// Data imports
 import { quizMap } from '../data/quizzes/index.js';
 import { achievements, getUnlockedAchievements } from '../data/achievements.js';
+
+// Library imports
 import { 
   saveProgress, 
   addScenarioCompletion,
   addQuizScore,
   unlockAchievement
 } from '../lib/progressTracker.js';
+
+// UI Component imports - CRITICAL: Check if you have this installed
 import {
   ResizablePanelGroup,
   ResizablePanel,
   ResizableHandle,
-} from "@/components/ui/resizable";
-import { Activity, AlertTriangle } from 'lucide-react';
+} from "../components/ui/resizable"; // or "@/components/ui/resizable"
 
 // ============================================================================
 // CONSTANTS
@@ -70,7 +79,7 @@ export default function SimulatorPage({
 }) {
   const currentScenario = allScenarios[scenarioId];
 
-  // State
+  // ========== STATE ==========
   const [currentStep, setCurrentStep] = useState(0);
   const [attackerOutput, setAttackerOutput] = useState([]);
   const [serverOutput, setServerOutput] = useState([]);
@@ -94,7 +103,7 @@ export default function SimulatorPage({
 
   // ========== EFFECTS ==========
 
-  // Timer
+  // Timer Effect
   useEffect(() => {
     if (!showBriefing && !isMissionCompleted) {
       timerRef.current = setInterval(() => {
@@ -109,7 +118,7 @@ export default function SimulatorPage({
     };
   }, [showBriefing, isMissionCompleted]);
 
-  // Reset when scenario changes
+  // Reset on scenario change
   useEffect(() => {
     setCurrentStep(0);
     setAttackerOutput([]);
@@ -125,6 +134,7 @@ export default function SimulatorPage({
     setShowQuiz(false);
     setQuizScore(null);
     setNewAchievements([]);
+    setSelectedMachine(null);
   }, [scenarioId]);
 
   // Prevent multiple mission complete modals
@@ -144,15 +154,17 @@ export default function SimulatorPage({
     
     if (!step) return;
 
+    // Check if command is correct
     const isCorrect = Array.isArray(step.expectedCommands)
       ? step.expectedCommands.some(cmd => command.toLowerCase().includes(cmd.toLowerCase()))
       : command.toLowerCase().includes(step.expectedCommand.toLowerCase());
 
     if (isCorrect) {
-      // Correct command
+      // Correct command - add output
       const output = step.attackerOutput || ['Command executed successfully'];
       setAttackerOutput(prev => [...prev, `$ ${command}`, ...output]);
 
+      // Add server output if exists
       if (step.serverOutput) {
         setTimeout(() => {
           setServerOutput(prev => [...prev, ...step.serverOutput]);
@@ -167,7 +179,7 @@ export default function SimulatorPage({
         setHighlightedArrow(step.highlightArrow);
       }
 
-      // Move to next step
+      // Move to next step or complete
       if (currentStep < currentScenario.steps.length - 1) {
         setTimeout(() => {
           setCurrentStep(prev => prev + 1);
@@ -179,27 +191,21 @@ export default function SimulatorPage({
     } else {
       // Wrong command
       setWrongAttempts(prev => prev + 1);
+      const errorMsg = step.commonMistakes?.[0]?.message || 'Try again or use a hint.';
       setAttackerOutput(prev => [
         ...prev,
         `$ ${command}`,
-        `[!] Incorrect command. ${step.commonMistakes?.[0]?.message || 'Try again or use a hint.'}`
+        `[!] Incorrect command. ${errorMsg}`
       ]);
     }
   };
 
   const handleScenarioComplete = () => {
-    if (isMissionCompleted) return; // Prevent duplicate completion
+    if (isMissionCompleted) return; // Prevent duplicate
 
     setIsMissionCompleted(true);
 
     const score = calculateScenarioScore(wrongAttempts, hintsUsed);
-    const stats = {
-      scoreEarned: score,
-      timeSpent: formatTime(timeElapsed),
-      stepsCompleted: currentScenario.steps.length,
-      wrongAttempts,
-      hintsUsed
-    };
 
     // Update progress
     const updatedProgress = addScenarioCompletion(progress, scenarioId, {
@@ -250,7 +256,15 @@ export default function SimulatorPage({
     setSelectedMachine(nodeId);
   };
 
-  // ========== NETWORK MAP CONFIGURATION ==========
+  const handleCloseMissionComplete = () => {
+    setShowDebrief(false);
+    const quiz = quizMap[scenarioId];
+    if (quiz && !quizScore) {
+      setShowQuiz(true);
+    }
+  };
+
+  // ========== NETWORK CONFIGURATION ==========
 
   const networkNodes = useMemo(() => {
     const nodes = [
@@ -262,7 +276,7 @@ export default function SimulatorPage({
         details: {
           os: 'Kali Linux',
           role: 'Attack Machine',
-          tools: ['Impacket', 'Mimikatz', 'BloodHound']
+          tools: ['Impacket', 'Mimikatz', 'BloodHound', 'Rubeus']
         }
       },
       {
@@ -273,7 +287,7 @@ export default function SimulatorPage({
         details: {
           os: 'Windows Server 2019',
           role: 'Target Server',
-          services: ['SMB', 'HTTP', 'LDAP']
+          services: ['SMB', 'HTTP', 'LDAP', 'RDP']
         }
       }
     ];
@@ -287,7 +301,7 @@ export default function SimulatorPage({
         details: {
           os: 'Windows Server 2019',
           role: 'Domain Controller',
-          services: ['Kerberos', 'LDAP', 'DNS']
+          services: ['Kerberos', 'LDAP', 'DNS', 'NTDS']
         }
       });
     }
@@ -302,7 +316,7 @@ export default function SimulatorPage({
 
     if (currentScenario.network.dc) {
       connections.push(
-        { from: 'attacker', to: 'dc', label: 'Replication' },
+        { from: 'attacker', to: 'dc', label: 'Auth Request' },
         { from: 'dc', to: 'target', label: 'Domain Trust' }
       );
     }
@@ -344,10 +358,10 @@ export default function SimulatorPage({
         onAchievementsClick={() => setShowAchievements(true)}
       />
 
-      {/* Main Content */}
+      {/* Main Content - Three Panel Layout */}
       <div className="flex-1 overflow-hidden">
         <ResizablePanelGroup direction="horizontal" className="h-full">
-          {/* Left Panel - Guide */}
+          {/* LEFT PANEL - Attack Guide */}
           <ResizablePanel defaultSize={25} minSize={20} maxSize={35}>
             <GuidePanel
               scenario={currentScenario}
@@ -364,11 +378,11 @@ export default function SimulatorPage({
 
           <ResizableHandle withHandle />
 
-          {/* Center Panel - Network Map */}
-          <ResizablePanel defaultSize={35} minSize={25}>
+          {/* CENTER PANEL - Network Map */}
+          <ResizablePanel defaultSize={35} minSize={25} maxSize={50}>
             <div className="h-full flex flex-col bg-[#0f1419]">
               {/* Network Visualization */}
-              <div className="flex-1 flex items-center justify-center p-4">
+              <div className="flex-1 flex items-center justify-center p-4 relative">
                 <InteractiveNetworkMap
                   nodes={networkNodes}
                   connections={networkConnections}
@@ -379,14 +393,14 @@ export default function SimulatorPage({
               </div>
 
               {/* Domain Info Bar */}
-              <div className="bg-[#1a1b1e] border-t border-white/10 p-3 flex items-center justify-between">
+              <div className="bg-[#1a1b1e] border-t border-white/10 p-3 flex items-center justify-between flex-shrink-0">
                 <div className="flex items-center gap-2">
                   <Activity className="w-4 h-4 text-[#2D9CDB]" />
                   <span className="text-xs text-white/60">Domain:</span>
                   <span className="text-xs font-mono text-white">{currentScenario.network.domain}</span>
                 </div>
                 <div className="flex items-center gap-2 text-xs text-white/60">
-                  <span>Network Range:</span>
+                  <span>Network:</span>
                   <span className="font-mono text-white">10.0.1.0/24</span>
                 </div>
               </div>
@@ -395,7 +409,7 @@ export default function SimulatorPage({
 
           <ResizableHandle withHandle />
 
-          {/* Right Panel - Attacker Terminal */}
+          {/* RIGHT PANEL - Terminal */}
           <ResizablePanel defaultSize={40} minSize={30}>
             <AttackerPanel
               scenario={currentScenario}
@@ -411,34 +425,35 @@ export default function SimulatorPage({
         </ResizablePanelGroup>
       </div>
 
+      {/* ========== MODALS ========== */}
+
       {/* Mission Briefing Modal */}
-      <MissionModal
-        isOpen={showBriefing}
-        onClose={() => setShowBriefing(false)}
-        type="briefing"
-        scenario={currentScenario}
-      />
+      {showBriefing && (
+        <MissionModal
+          isOpen={showBriefing}
+          onClose={() => setShowBriefing(false)}
+          type="briefing"
+          scenario={currentScenario}
+        />
+      )}
 
       {/* Mission Debrief Modal */}
-      <MissionModal
-        isOpen={showDebrief && isMissionCompleted}
-        onClose={() => {
-          setShowDebrief(false);
-          if (quiz && !quizScore) {
-            setShowQuiz(true);
-          }
-        }}
-        type="debrief"
-        scenario={currentScenario}
-        stats={{
-          scoreEarned: calculateScenarioScore(wrongAttempts, hintsUsed),
-          timeSpent: formatTime(timeElapsed),
-          stepsCompleted: currentScenario.steps.length,
-          wrongAttempts,
-          hintsUsed
-        }}
-        newAchievements={newAchievements}
-      />
+      {showDebrief && isMissionCompleted && (
+        <MissionModal
+          isOpen={showDebrief}
+          onClose={handleCloseMissionComplete}
+          type="debrief"
+          scenario={currentScenario}
+          stats={{
+            scoreEarned: calculateScenarioScore(wrongAttempts, hintsUsed),
+            timeSpent: formatTime(timeElapsed),
+            stepsCompleted: currentScenario.steps.length,
+            wrongAttempts,
+            hintsUsed
+          }}
+          newAchievements={newAchievements}
+        />
+      )}
 
       {/* Quiz Modal */}
       {quiz && showQuiz && (
