@@ -35,11 +35,9 @@ export const bloodhoundScenario = {
 3. Analyze the collected data to find privilege escalation paths
 
 **Why This Matters:**
-BloodHound can quickly identify complex attack paths that would take hours to find manually, such as:
-- Shortest path to Domain Admin
-- Kerberoastable accounts
-- Accounts with DCSync rights
-- Computers with unconstrained delegation`,
+BloodHound can quickly identify complex attack paths that would take hours to find manually.
+    
+**Note:** This scenario uses the 'sqlservice' credentials compromised in the Kerberoasting mission.`,
 
     steps: [
       {
@@ -52,8 +50,8 @@ BloodHound can quickly identify complex attack paths that would take hours to fi
       {
         number: 2,
         title: 'Run BloodHound Python Collector',
-        description: 'Use bloodhound-python to collect AD objects via LDAP. This tool queries the domain controller for users, groups, computers, and their relationships.',
-        command: 'bloodhound-python -d contoso.local -u admin -p Password123 --zip',
+        description: 'Use bloodhound-python with the compromised "sqlservice" credentials to collect AD objects via LDAP.',
+        command: 'bloodhound-python -d contoso.local -u sqlservice -p P@ssw0rd123! --zip',
         tip: 'The --zip flag packages all collected data into a single file for easy import'
       },
       {
@@ -88,11 +86,11 @@ BloodHound can quickly identify complex attack paths that would take hours to fi
     },
     {
       id: 2,
-      expectedCommand: 'bloodhound-python -d contoso.local -u admin -p Password123 --zip',
+      expectedCommand: 'bloodhound-python -d contoso.local -u sqlservice -p P@ssw0rd123! --zip',
       attackerOutput: [
         '[*] Initializing BloodHound Python collector',
         '[*] Connecting to contoso.local...',
-        '[*] Authenticating as admin@contoso.local',
+        '[*] Authenticating as sqlservice@contoso.local',
         '[+] Authentication successful!',
         '[*] Resolving domain controller: DC01.contoso.local (10.0.1.10)',
         '[*] Querying LDAP for domain objects...',
@@ -107,8 +105,8 @@ BloodHound can quickly identify complex attack paths that would take hours to fi
       ],
       serverOutput: [
         '[LDAP] Connection established from 10.0.0.5:49152',
-        '[AUTH] NTLM authentication attempt: CONTOSO\\admin',
-        '[AUTH] Authentication successful for admin@contoso.local',
+        '[AUTH] NTLM authentication attempt: CONTOSO\\sqlservice',
+        '[AUTH] Authentication successful for sqlservice@contoso.local',
         '[LDAP] Query: (&(objectClass=user)(objectCategory=person))',
         '[LDAP] Returned 245 user objects',
         '[LDAP] Query: (objectClass=group)',
@@ -155,9 +153,9 @@ BloodHound can quickly identify complex attack paths that would take hours to fi
         '[INFO] - Duration: 47 seconds',
         '[INFO] - LDAP queries: 1,247',
         '[INFO] - Objects accessed: 502',
-        '[INFO] - Authentication: NTLM (admin)',
+        '[INFO] - Authentication: NTLM (sqlservice)',
         '[WARN] Behavior consistent with AD enumeration tools',
-        '[ALERT] Recommend investigation of admin account activity'
+        '[ALERT] Recommend investigation of sqlservice account activity'
       ],
       delay: 400
     }

