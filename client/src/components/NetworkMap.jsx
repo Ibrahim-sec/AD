@@ -1,9 +1,15 @@
-export default function NetworkMap({ highlightedMachine, highlightedArrow, network }) {
+export default function NetworkMap({ highlightedMachine, highlightedArrow, network, compromisedNodes = [] }) {
   // Allow scenario-specific network data to override default IPs
   const attackerIp = network?.attacker?.ip || '10.0.0.5';
   const targetIp = network?.target?.ip || '10.0.1.10';
   // Many scenarios do not define a separate DC IP; default to .20
   const dcIp = network?.dc?.ip || '10.0.1.20';
+
+  // --- NEW: Check if nodes are compromised ---
+  const isAttackerCompromised = compromisedNodes.includes('attacker');
+  const isInternalCompromised = compromisedNodes.includes('target'); // 'target' maps to Internal Server
+  const isDcCompromised = compromisedNodes.includes('dc');
+  // ------------------------------------------
 
   return (
     <div className="network-map-container">
@@ -13,7 +19,7 @@ export default function NetworkMap({ highlightedMachine, highlightedArrow, netwo
         preserveAspectRatio="xMidYMid meet"
       >
         {/* Attacker Machine */}
-        <g className={`machine ${highlightedMachine === 'attacker' ? 'highlighted' : ''}`}>
+        <g className={`machine ${highlightedMachine === 'attacker' ? 'highlighted' : ''} ${isAttackerCompromised ? 'compromised' : ''}`}>
           <rect x="50" y="30" width="120" height="60" rx="8" />
           <text x="110" y="65" textAnchor="middle" className="machine-label">
             Attacker
@@ -33,7 +39,7 @@ export default function NetworkMap({ highlightedMachine, highlightedArrow, netwo
         </g>
 
         {/* Internal/Target Server */}
-        <g className={`machine ${highlightedMachine === 'target' ? 'highlighted' : ''}`}>
+        <g className={`machine ${highlightedMachine === 'target' ? 'highlighted' : ''} ${isInternalCompromised ? 'compromised' : ''}`}>
           <rect x="280" y="30" width="120" height="60" rx="8" />
           <text x="340" y="65" textAnchor="middle" className="machine-label">
             Internal Server
@@ -53,7 +59,7 @@ export default function NetworkMap({ highlightedMachine, highlightedArrow, netwo
         </g>
 
         {/* Domain Controller */}
-        <g className={`machine ${highlightedMachine === 'dc' ? 'highlighted' : ''}`}>
+        <g className={`machine ${highlightedMachine === 'dc' ? 'highlighted' : ''} ${isDcCompromised ? 'compromised' : ''}`}>
           <rect x="510" y="30" width="120" height="60" rx="8" />
           <text x="570" y="65" textAnchor="middle" className="machine-label">
             Domain Controller

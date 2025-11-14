@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'; // ADDED useState/useEffect
+import { useState, useEffect, useMemo } from 'react'; // ADDED useMemo
 import { BookOpen, Lightbulb, Terminal, ChevronDown, Network } from 'lucide-react';
 import { Streamdown } from 'streamdown';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
@@ -20,13 +20,25 @@ const getInitialCollapseState = (key) => {
     }
 };
 
+// --- NEW: Define which scenarios compromise which nodes ---
+// We map the scenario ID to the generic node name in NetworkMap.jsx
+// 'target' = Internal Server
+// 'dc' = Domain Controller
+const compromiseMap = {
+  'pass-the-hash': ['target', 'dc'], // This scenario compromises both
+  'dcsync': ['dc'],                 // This one compromises the DC
+  'golden-ticket': ['dc']         // This one also compromises the DC
+};
+// ----------------------------------------------------
+
 export default function GuidePanel({ 
   scenario, 
   currentStep, 
   tutorialMode = false, 
   onTutorialToggle,
   highlightedMachine,
-  highlightedArrow
+  highlightedArrow,
+  progress // <-- 1. ACCEPT THE NEW PROP
 }) {
   const { guide } = scenario;
   const currentGuideStep = guide.steps[currentStep];
@@ -50,6 +62,24 @@ export default function GuidePanel({
           localStorage.setItem(GUIDE_COLLAPSE_KEY, JSON.stringify(open));
       } catch (e) { /* ignore */ }
   };
+
+  // --- 2. NEW: Calculate compromised nodes based on progress ---
+  const compromisedNodes = useMemo(() => {
+    const nodes = new Set();
+    // The 'attacker' node is always "compromised" by default
+    nodes.add('attacker'); 
+    
+    // Check all completed scenarios
+    if (progress && progress.scenariosCompleted) {
+      progress.scenariosCompleted.forEach(scenarioId => {
+        if (compromiseMap[scenarioId]) {
+          compromiseMap[scenarioId].forEach(node => nodes.add(node));
+        }
+      });
+    }
+    return Array.from(nodes);
+  }, [progress]);
+  // ---------------------------------------------------------
 
   return (
     <div className="panel guide-panel flex flex-col gap-4">
@@ -75,12 +105,14 @@ export default function GuidePanel({
                         highlightedMachine={highlightedMachine}
                         highlightedArrow={highlightedArrow}
                         network={scenario.network}
+                        compromisedNodes={compromisedNodes} // <-- 3. PASS THE NEW PROP
                     />
                 </div>
             </CollapsibleContent>
         </Collapsible>
         
         {/* 2. Attack Guide Panel (Main Content) */}
+        {/* ... (rest of the file is unchanged) ... */}
         <div className="flex-1 border border-border-color rounded-lg overflow-hidden flex flex-col min-h-0">
             <Collapsible 
                 open={isGuideOpen} // Control state via hook

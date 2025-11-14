@@ -40,6 +40,15 @@ const getDefenseAlertForStep = (stepId, scenarioId) => {
     return null;
 }
 
+// --- NEW: Helper to get the prompt for a sub-shell ---
+const getSubShellPrompt = (shell) => {
+  if (shell === 'mimikatz') {
+    return 'mimikatz # ';
+  }
+  return '> '; // Default sub-shell prompt
+}
+// --------------------------------------------------
+
 export default function SimulatorPage({ 
   scenarioId, 
   allScenarios,
@@ -59,11 +68,14 @@ export default function SimulatorPage({
   const [highlightedMachine, setHighlightedMachine] = useState(null);
   const [highlightedArrow, setHighlightedArrow] = useState(null);
   
-  // --- MODIFIED: Loot & File System State ---
+  // --- Loot & File System State ---
   const [defenseHistory, setDefenseHistory] = useState([]);
   const [credentialInventory, setCredentialInventory] = useState([]);
   const [simulatedFiles, setSimulatedFiles] = useState([]);
-  const [simulatedFileSystem, setSimulatedFileSystem] = useState({}); // NEW: Holds loot *before* it's downloaded
+  const [simulatedFileSystem, setSimulatedFileSystem] = useState({});
+  
+  // --- NEW: Sub-shell state ---
+  const [subShell, setSubShell] = useState(null); // e.g., 'mimikatz' or null
   
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [customTheme, setCustomTheme] = useState(() => {
@@ -94,7 +106,6 @@ export default function SimulatorPage({
   const [tutorialMode, setTutorialMode] = useState(progress.tutorialMode);
   const [hintsShown, setHintsShown] = useState({});
 
-  // Redirect if scenario doesn't exist
   if (!currentScenario) {
     return <Redirect to="/" />;
   }
@@ -119,7 +130,8 @@ export default function SimulatorPage({
     resetScenario();
     setCredentialInventory([]); 
     setSimulatedFiles([]);
-    setSimulatedFileSystem({}); // NEW: Reset simulated file system
+    setSimulatedFileSystem({});
+    setSubShell(null); // Reset sub-shell state
     
     const hasSeen = safeGetItem(briefingStorageKey, null);
     setShowMissionBriefing(hasSeen !== true);
@@ -137,17 +149,18 @@ export default function SimulatorPage({
   // Auto-advances steps with expectedCommand: null
   useEffect(() => {
     const step = currentScenario?.steps[currentStep];
-    if (step && step.expectedCommand == null && !isProcessing) {
+    if (step && step.expectedCommand == null && !isProcessing && !subShell) { // Only run if not in a sub-shell
       setIsProcessing(true);
       processStepOutput(step);
     }
-  }, [currentStep, currentScenario, isProcessing]);
+  }, [currentStep, currentScenario, isProcessing, subShell]); // Added subShell dependency
 
   const resetScenario = () => {
     setCurrentStep(0);
     setActiveMachine('attacker');
     setHighlightedMachine(null);
     setHighlightedArrow(null);
+    setSubShell(null); // Reset sub-shell on scenario reset
     
     setAttackerHistory([
       { type: 'system', text: `Welcome to ${currentScenario.network.attacker.hostname}` },
@@ -173,56 +186,102 @@ export default function SimulatorPage({
     ]);
   };
   
-  // --- CORE SIMULATION LOGIC ---
-  
-  // --- [ MODIFICATION 1: UPDATED processStepOutput ] ---
-  // Replaced hardcoded `if (scenarioId === ...)` with a generic `lootToGrant` system.
+  // --- [ NEW FUNCTION: processSubCommandOutput ] ---
+  // This processes the output of a sub-shell command *without* advancing the step.
+  const processSubCommandOutput = async (subCommand) => {
+    const { attackerOutput, serverOutput, delay, lootToGrant } = subCommand;
+
+    // Simulate attacker output
+    if (attackerOutput) {
+      for (let i = 0; i < attackerOutput.length; i++) {
+        await new Promise(resolve => setTimeout(resolve, delay));
+        setAttackerHistory(prev => [
+          ...prev,
+          { type: 'output', text: attackerOutput[i] }
+        ]);
+      }
+    }
+    
+    // Simulate server output
+    if (serverOutput) {
+      for (let i = 0; i < serverOutput.length; i++) {
+        await new Promise(resolve => setTimeout(resolve, delay));
+        setServerHistory(prev => [
+          ...prev,
+          { type: 'log', text: serverOutput[i] }
+        ]);
+      }
+    }
+
+    // Grant loot (e.g., hash from mimikatz)
+    if (lootToGrant) {
+      if (lootToGrant.files) {
+        setSimulatedFileSystem(prev => ({ ...prev, ...lootToGrant.files }));
+      }
+      if (lootToGrant.creds) {
+        lootToGrant.creds.forEach(cred => {
+          harvestCredential(cred.type, cred.username, cred.secret);
+        });
+      }
+      if (lootToGrant.download) {
+        lootToGrant.download.forEach(file => {
+          setSimulatedFiles(prev => [...prev, file]);
+        });
+      }
+    }
+    
+    // Add the sub-shell prompt again
+    setAttackerHistory(prev => [
+      ...prev,
+      { type: 'sub-prompt', text: getSubShellPrompt(subShell) }
+    ]);
+    
+    setIsProcessing(false);
+  };
+  // --- [ END NEW FUNCTION ] ---
+
+
+  // --- [ MODIFIED: processStepOutput ] ---
+  // This function now checks if it needs to enter a sub-shell *instead* of advancing.
   const processStepOutput = async (step) => {
-    const { attackerOutput, serverOutput, delay } = step;
+    const { attackerOutput, serverOutput, delay, lootToGrant, enterSubShell } = step;
 
     setHighlightedMachine('target');
     setHighlightedArrow('attacker-to-target');
 
-    for (let i = 0; i < attackerOutput.length; i++) {
-      await new Promise(resolve => setTimeout(resolve, delay));
-      setAttackerHistory(prev => [
-        ...prev,
-        { type: 'output', text: attackerOutput[i] }
-      ]);
-    }
-
-    for (let i = 0; i < serverOutput.length; i++) {
-      await new Promise(resolve => setTimeout(resolve, delay));
-      setServerHistory(prev => [
-        ...prev,
-        { type: 'log', text: serverOutput[i] }
-      ]);
-    }
-
-    // --- NEW GENERIC LOOT SYSTEM ---
-    // This block replaces the old hardcoded `if (scenarioId === ...)` checks
-    if (step.lootToGrant) {
-      // Grant files to the *simulated file system* (not the Files tab)
-      if (step.lootToGrant.files) {
-        setSimulatedFileSystem(prev => ({
+    if (attackerOutput) {
+      for (let i = 0; i < attackerOutput.length; i++) {
+        await new Promise(resolve => setTimeout(resolve, delay));
+        setAttackerHistory(prev => [
           ...prev,
-          ...step.lootToGrant.files
-        }));
+          { type: 'output', text: attackerOutput[i] }
+        ]);
       }
-      // Grant credentials (passwords/hashes)
-      if (step.lootToGrant.creds) {
-        step.lootToGrant.creds.forEach(cred => {
+    }
+    if (serverOutput) {
+      for (let i = 0; i < serverOutput.length; i++) {
+        await new Promise(resolve => setTimeout(resolve, delay));
+        setServerHistory(prev => [
+          ...prev,
+          { type: 'log', text: serverOutput[i] }
+        ]);
+      }
+    }
+    if (lootToGrant) {
+      if (lootToGrant.files) {
+        setSimulatedFileSystem(prev => ({ ...prev, ...lootToGrant.files }));
+      }
+      if (lootToGrant.creds) {
+        lootToGrant.creds.forEach(cred => {
           harvestCredential(cred.type, cred.username, cred.secret);
         });
       }
-      // Grant files directly to the "Files" tab (for `download` commands)
-      if (step.lootToGrant.download) {
+      if (lootToGrant.download) {
         step.lootToGrant.download.forEach(file => {
           setSimulatedFiles(prev => [...prev, file]);
         });
       }
     }
-    // --- END NEW LOOT SYSTEM ---
 
     const defenseAlert = getDefenseAlertForStep(step.id, scenarioId);
     if (defenseAlert) {
@@ -234,14 +293,27 @@ export default function SimulatorPage({
 
     setHighlightedMachine(null);
     setHighlightedArrow(null);
-
-    setIsProcessing(false);
     
-    if (currentStep === currentScenario.steps.length - 1) {
-      completeScenario();
+    // --- NEW SUB-SHELL LOGIC ---
+    if (enterSubShell) {
+      // Enter the sub-shell instead of advancing the step
+      setSubShell(enterSubShell);
+      // Add the new prompt to history
+      setAttackerHistory(prev => [
+        ...prev,
+        { type: 'sub-prompt', text: getSubShellPrompt(enterSubShell) }
+      ]);
+      setIsProcessing(false);
     } else {
-      setCurrentStep(prev => prev + 1);
+      // Normal step advancement
+      setIsProcessing(false);
+      if (currentStep === currentScenario.steps.length - 1) {
+        completeScenario();
+      } else {
+        setCurrentStep(prev => prev + 1);
+      }
     }
+    // --- END NEW SUB-SHELL LOGIC ---
   };
 
 
@@ -284,6 +356,7 @@ export default function SimulatorPage({
   };
 
   const resolveLootVariables = (commandString) => {
+    // ... (This function is unchanged)
     const lootRegex = /\[loot:([^\]]+)\]/gi;
     let resolvedCmd = commandString;
 
@@ -307,19 +380,84 @@ export default function SimulatorPage({
     return resolvedCmd;
   };
 
-  // --- [ MODIFICATION 2: UPDATED handleCommandSubmit ] ---
-  // This now checks for 'dir', 'ls', 'cat', 'type' before checking the step command.
+  // --- [ MODIFICATION 3: HEAVILY UPDATED handleCommandSubmit ] ---
   const handleCommandSubmit = (command) => {
     const normalizedInput = command.trim().toLowerCase();
     
-    // Always echo the command
-    setAttackerHistory(prev => [
-      ...prev,
-      { type: 'command', text: `root@${currentScenario.network.attacker.hostname}:~# ${command}` }
-    ]);
+    // Echo the command (different style for sub-shell)
+    if (subShell) {
+      setAttackerHistory(prev => [
+        ...prev,
+        { type: 'command', text: `${getSubShellPrompt(subShell)}${command}` }
+      ]);
+    } else {
+      setAttackerHistory(prev => [
+        ...prev,
+        { type: 'command', text: `root@${currentScenario.network.attacker.hostname}:~# ${command}` }
+      ]);
+    }
 
-    // --- NEW: Interactive File System Commands (Pre-check) ---
-    // These commands do NOT advance the step.
+    // --- NEW: Sub-shell command handling ---
+    if (subShell) {
+      const step = currentScenario.steps[currentStep];
+
+      // Check for exit command
+      if (normalizedInput === 'exit') {
+        // If the *main* step expects 'exit', this is the command to advance.
+        if (step.expectedCommand === 'exit') {
+          setIsProcessing(true);
+          processStepOutput(step); // Process the "exit" step
+        } else {
+          // Otherwise, just exit the sub-shell and go back to the main prompt
+          setSubShell(null);
+          setAttackerHistory(prev => [
+            ...prev,
+            { type: 'output', text: 'Exiting sub-shell...' }
+          ]);
+        }
+        return;
+      }
+      
+      // Find the sub-commands for the current step and shell
+      const subCommands = step.subShellCommands?.[subShell]?.commands || [];
+      let subMatch = null;
+
+      for (const cmdData of subCommands) {
+        const expectedList = Array.isArray(cmdData.expectedCommands)
+          ? cmdData.expectedCommands
+          : [cmdData.expectedCommand];
+        
+        const isMatch = expectedList.some(cmd => {
+          if (!cmd) return false;
+          const resolvedCmd = resolveLootVariables(cmd.trim().toLowerCase());
+          return normalizedInput === resolvedCmd;
+        });
+
+        if (isMatch) {
+          subMatch = cmdData;
+          break;
+        }
+      }
+
+      if (subMatch) {
+        // Run the sub-command's output, but DO NOT advance the main step
+        setIsProcessing(true);
+        processSubCommandOutput(subMatch);
+      } else {
+        // Show a sub-shell specific error
+        setAttackerHistory(prev => [
+          ...prev,
+          { type: 'error', text: `[!] ${subShell} error: command not recognized: "${command}"` },
+          { type: 'sub-prompt', text: getSubShellPrompt(subShell) }
+        ]);
+      }
+      return;
+    }
+    // --- End of sub-shell logic ---
+
+    // --- Standard (main shell) command handling ---
+
+    // Interactive File System Commands (Pre-check)
     if (normalizedInput === 'ls' || normalizedInput === 'dir') {
       const files = Object.keys(simulatedFileSystem);
       if (files.length === 0) {
@@ -349,7 +487,6 @@ export default function SimulatorPage({
       }
       return; // Do not proceed to step check
     }
-    // --- End of new pre-checks ---
 
     // Standard step validation logic
     const step = currentScenario.steps[currentStep];
@@ -373,7 +510,7 @@ export default function SimulatorPage({
       return normalizedInput === resolvedCmd;
     });
 
-    // If the input does not match any expected command...
+    // If the input does not match...
     if (!isMatch) {
       setScenarioStats(prev => ({ ...prev, wrongAttempts: prev.wrongAttempts + 1 }));
 
@@ -402,7 +539,6 @@ export default function SimulatorPage({
           ]);
         } else {
           const firstExpectedCmd = expectedList.length > 0 ? resolveLootVariables(expectedList[0]) : '';
-          // Don't show the full resolved command if it's a "download" or "note" command
           const suggestion = (firstExpectedCmd && !firstExpectedCmd.startsWith('download') && !firstExpectedCmd.startsWith('note'))
             ? `Did you mean: ${firstExpectedCmd}?` 
             : '';
@@ -500,6 +636,7 @@ export default function SimulatorPage({
                   highlightedMachine={highlightedMachine}
                   highlightedArrow={highlightedArrow}
                   onShowBriefing={() => setShowMissionBriefing(true)}
+                  progress={progress}
                 />
                 
                 <AttackerPanel 
@@ -515,6 +652,9 @@ export default function SimulatorPage({
                   simulatedFiles={simulatedFiles} 
                   onShowHint={() => handleShowHint(currentStep)}
                   hintsAvailable={currentStep < currentScenario.steps.length}
+                  
+                  // --- NEW PROP: Pass sub-shell state ---
+                  subShell={subShell}
                 />
               </div>
             </div>

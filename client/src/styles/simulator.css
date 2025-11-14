@@ -917,3 +917,34 @@
     flex-direction: column;
   }
 }
+
+/* Add this to the end of client/src/styles/simulator.css */
+
+/* ===================================
+   Network Map Enhancements
+   =================================== */
+
+.machine.highlighted rect {
+  fill: rgba(139, 92, 246, 0.2); /* Violet highlight for *current* step */
+  stroke-width: 3;
+  filter: drop-shadow(0 0 8px rgba(139, 92, 246, 0.6));
+}
+
+.machine.compromised rect {
+  /* Use semantic red for *permanent* compromise */
+  fill: rgba(244, 63, 94, 0.1); 
+  stroke: var(--terminal-red);
+  stroke-width: 2;
+}
+
+.machine.compromised text {
+  fill: var(--terminal-text);
+}
+
+/* Make the compromise glow override the temp highlight */
+.machine.compromised.highlighted rect {
+  fill: rgba(244, 63, 94, 0.25); 
+  stroke: var(--terminal-red);
+  stroke-width: 3;
+  filter: drop-shadow(0 0 8px rgba(244, 63, 94, 0.6));
+}
