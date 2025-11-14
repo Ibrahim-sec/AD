@@ -11,7 +11,8 @@ import {
 // To unlock a scenario (key), the user must have completed the prerequisite (value).
 const scenarioPrerequisites = {
   'asrep-roasting': 'nmap-recon',
-  'password-spraying': 'nmap-recon', // <-- ADD THIS (Also requires nmap)
+  'password-spraying': 'nmap-recon',
+  'llmnr-poisoning': 'nmap-recon', // <-- ADD THIS (Also requires nmap)
   'kerberoasting': 'asrep-roasting', // This path still works
   'bloodhound': 'kerberoasting',
   'pass-the-hash': 'bloodhound',
@@ -142,9 +143,15 @@ export default function ScenarioSelectionPage({ allScenarios, progress, customSc
                 progress={progress}
                 onScenarioSelect={onScenarioSelect}
               />
-              {/* --- ADD THE NEW SCENARIO CARD HERE --- */}
               <RenderScenarioCard
                 scenario={allScenarios['password-spraying']}
+                allScenarios={allScenarios}
+                progress={progress}
+                onScenarioSelect={onScenarioSelect}
+              />
+              {/* --- ADD THE NEW SCENARIO CARD HERE --- */}
+              <RenderScenarioCard
+                scenario={allScenarios['llmnr-poisoning']}
                 allScenarios={allScenarios}
                 progress={progress}
                 onScenarioSelect={onScenarioSelect}
