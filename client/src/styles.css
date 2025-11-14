@@ -258,7 +258,7 @@ body {
   flex-direction: column;
   gap: var(--panel-gap);
   padding: var(--panel-gap);
-  /* overflow: hidden; <-- THIS WAS THE SCROLLING PROBLEM */
+  overflow-y: auto; /* Allow vertical scrolling for the whole page content */
   overflow-x: hidden;
   min-width: 0;
   min-height: 0;
@@ -278,10 +278,8 @@ body {
 /* 2. Home Page Grid (Single column, centered) */
 .main-home-layout {
   display: flex;
-  /* UPDATED: This controls vertical alignment, set to top */
-  justify-content: flex-start; 
-  /* UPDATED: This controls horizontal alignment, set to center */
-  align-items: center; 
+  justify-content: flex-start; /* Aligns content to the top */
+  align-items: center; /* Aligns content to the center horizontally */
   min-height: 100%;
   overflow-y: auto;
 }
@@ -300,13 +298,16 @@ body {
     gap: 30px;
 }
 
+.scenario-selection-page .selector-header {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
 .scenario-selection-page h1 {
     font-size: 28px;
     color: var(--accent-color);
     margin: 0;
-    display: flex;
-    align-items: center;
-    gap: 15px;
 }
 
 .scenarios-grid-container {
@@ -2638,6 +2639,31 @@ select:focus-visible {
   }
 }
 
+/* Focus Management for Keyboard Navigation */
+.keyboard-focus-visible:focus {
+  outline: 2px solid var(--terminal-green);
+  outline-offset: 2px;
+}
+
+/* Improved Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #484f58;
+}
+
 /* ===================================
    Locked Scenario Styles
    =================================== */
@@ -2676,27 +2702,67 @@ select:focus-visible {
   color: inherit;
 }
 
-/* Focus Management for Keyboard Navigation */
-.keyboard-focus-visible:focus {
-  outline: 2px solid var(--terminal-green);
-  outline-offset: 2px;
+
+/* ===================================
+   NEW CAMPAIGN PATH STYLES
+   =================================== */
+
+.campaign-container {
+  display: flex;
+  flex-direction: row;
+  gap: 16px;
+  overflow-x: auto; /* This makes it scroll horizontally */
+  padding: 16px 4px 20px 4px; /* Space for the scrollbar and cards */
+  background: var(--terminal-bg);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
 }
 
-/* Improved Scrollbar Styling */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+/* Custom scrollbar for the campaign container */
+.campaign-container::-webkit-scrollbar {
+  height: 10px;
+}
+.campaign-container::-webkit-scrollbar-thumb {
+  background: var(--accent-color);
+  border-radius: 5px;
+  border: 2px solid var(--terminal-bg);
+}
+.campaign-container::-webkit-scrollbar-track {
+  background: var(--terminal-bg);
 }
 
-::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.2);
+.campaign-tier {
+  flex: 0 0 300px; /* Each column is 300px wide */
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  /* This ensures the tier itself doesn't scroll, the container does */
+  overflow: visible; 
 }
 
-::-webkit-scrollbar-thumb {
-  background: var(--border-color);
-  border-radius: 4px;
+.tier-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--accent-color);
+  text-align: center;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 10px;
+  margin: 0 10px;
+  white-space: nowrap;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: #484f58;
+.campaign-connector {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--border-color);
+  opacity: 0.5;
+}
+
+/* We still need the grid for Custom Scenarios */
+.scenarios-list-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
 }
