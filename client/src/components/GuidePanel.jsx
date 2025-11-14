@@ -21,12 +21,12 @@ export default function GuidePanel({
   const [activeTab, setActiveTab] = useState('guide'); // 'guide' or 'network'
   const [showMapSuggestion, setShowMapSuggestion] = useState(false);
   
-  const hasTheory = hasTheoryModule(scenario.id);
+  const hasTheory = hasTheoryModule(scenario?.id);
   const theoryModule = hasTheory ? getTheoryModule(scenario.id) : null;
 
-  const step = scenario.steps[currentStep];
-  const totalSteps = scenario.steps.length;
-  const progressPercentage = Math.round(((currentStep + 1) / totalSteps) * 100);
+  const step = scenario?.steps?.[currentStep];
+  const totalSteps = scenario?.steps?.length || 0;
+  const progressPercentage = totalSteps > 0 ? Math.round(((currentStep + 1) / totalSteps) * 100) : 0;
 
   // Determine current attack position in network
   const getCurrentPosition = () => {
@@ -72,6 +72,20 @@ export default function GuidePanel({
     }
     return 'text-white/30';
   };
+
+  // Safety check - if no scenario data, show loading
+  if (!scenario) {
+    return (
+      <div className="h-full flex items-center justify-center bg-[#1a1b1e]">
+        <div className="text-center">
+          <div className="text-white/40 mb-2">
+            <Book className="w-12 h-12 mx-auto mb-2 animate-pulse" />
+          </div>
+          <p className="text-sm text-white/60">Loading scenario...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -329,7 +343,7 @@ export default function GuidePanel({
               </div>
               
               <div className="flex-1 overflow-hidden relative">
-                {scenario && scenario.network ? (
+                {scenario && scenario.network && scenario.network.attacker && scenario.network.target ? (
                   <InteractiveNetworkMap
                     scenario={scenario}
                     currentStep={currentStep}
@@ -344,7 +358,8 @@ export default function GuidePanel({
                       <div className="text-white/40 mb-2">
                         <Map className="w-12 h-12 mx-auto mb-2" />
                       </div>
-                      <p className="text-sm text-white/60">Loading network topology...</p>
+                      <p className="text-sm text-white/60">Network topology not available</p>
+                      <p className="text-xs text-white/40 mt-1">This scenario may not have network data configured</p>
                     </div>
                   </div>
                 )}
