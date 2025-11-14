@@ -17,7 +17,15 @@ import {
 } from '../lib/progressTracker.js';
 import { safeGetItem, safeSetItem } from '../lib/safeStorage.js';
 
-// Helper function definitions
+// --- NEW: Import Resizable Components ---
+import {
+  ResizablePanelGroup,
+  ResizablePanel,
+  ResizableHandle,
+} from "@/components/ui/resizable";
+// ----------------------------------------
+
+// ... (Helper functions remain the same) ...
 const calculateScenarioScore = (wrongAttempts, hintsUsed) => {
     if (wrongAttempts === 0 && hintsUsed === 0) {
       return 10;
@@ -28,7 +36,6 @@ const calculateScenarioScore = (wrongAttempts, hintsUsed) => {
     }
     return 0;
 };
-
 const getDefenseAlertForStep = (stepId, scenarioId) => {
     if (scenarioId === 'kerberoasting') {
         if (stepId === 1) return "[DEFENSE] ALERT: LDAP Query pattern detected (SPN enumeration).";
@@ -39,6 +46,13 @@ const getDefenseAlertForStep = (stepId, scenarioId) => {
     }
     return null;
 }
+const getSubShellPrompt = (shell) => {
+  if (shell === 'mimikatz') {
+    return 'mimikatz # ';
+  }
+  return '> ';
+}
+// --------------------------------------------------
 
 export default function SimulatorPage({ 
   scenarioId, 
@@ -48,9 +62,8 @@ export default function SimulatorPage({
   appMode, 
   setAppMode,
 }) {
+  // ... (All state variables remain the same) ...
   const currentScenario = allScenarios[scenarioId];
-
-  // --- LOCAL SIMULATOR STATE ---
   const [currentStep, setCurrentStep] = useState(0);
   const [attackerHistory, setAttackerHistory] = useState([]);
   const [serverHistory, setServerHistory] = useState([]);
@@ -58,13 +71,11 @@ export default function SimulatorPage({
   const [activeMachine, setActiveMachine] = useState('attacker');
   const [highlightedMachine, setHighlightedMachine] = useState(null);
   const [highlightedArrow, setHighlightedArrow] = useState(null);
-  
-  // --- MODIFIED: Loot & File System State ---
   const [defenseHistory, setDefenseHistory] = useState([]);
   const [credentialInventory, setCredentialInventory] = useState([]);
   const [simulatedFiles, setSimulatedFiles] = useState([]);
-  const [simulatedFileSystem, setSimulatedFileSystem] = useState({}); // NEW: Holds loot *before* it's downloaded
-  
+  const [simulatedFileSystem, setSimulatedFileSystem] = useState({});
+  const [subShell, setSubShell] = useState(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [customTheme, setCustomTheme] = useState(() => {
     try {
@@ -73,15 +84,11 @@ export default function SimulatorPage({
         return {};
     }
   });
-
-  
-  // --- MODAL / GAME STATE ---
   const briefingStorageKey = `hasSeenBriefing_${scenarioId}`;
   const [showMissionBriefing, setShowMissionBriefing] = useState(() => {
     const hasSeen = safeGetItem(briefingStorageKey, null);
     return hasSeen !== true;
   }); 
-  
   const [showMissionDebrief, setShowMissionDebrief] = useState(false);
   const [showQuiz, setShowQuiz] = useState(false);
   const [showAchievements, setShowAchievements] = useState(false);
@@ -94,18 +101,15 @@ export default function SimulatorPage({
   const [tutorialMode, setTutorialMode] = useState(progress.tutorialMode);
   const [hintsShown, setHintsShown] = useState({});
 
-  // Redirect if scenario doesn't exist
   if (!currentScenario) {
     return <Redirect to="/" />;
   }
   
-  // --- HANDLERS ---
-  
+  // ... (All handler functions remain the same) ...
   const handleUpdateTheme = (newTheme) => {
     setCustomTheme(newTheme);
     localStorage.setItem('terminal_theme', JSON.stringify(newTheme));
   };
-
   const harvestCredential = (type, username, secret) => {
       setCredentialInventory(prev => {
           const newCred = { id: Date.now(), type, username, secret };
@@ -113,17 +117,15 @@ export default function SimulatorPage({
           return [...prev, newCred];
       });
   };
-
-  // --- Initialize/Reset State ---
   useEffect(() => {
     resetScenario();
     setCredentialInventory([]); 
     setSimulatedFiles([]);
-    setSimulatedFileSystem({}); // NEW: Reset simulated file system
+    setSimulatedFileSystem({});
+    setSubShell(null); 
     
     const hasSeen = safeGetItem(briefingStorageKey, null);
     setShowMissionBriefing(hasSeen !== true);
-
     setShowMissionDebrief(false);
     setShowQuiz(false);
     setScenarioStats({
@@ -133,21 +135,19 @@ export default function SimulatorPage({
     });
     setHintsShown({});
   }, [scenarioId, briefingStorageKey]); 
-
-  // Auto-advances steps with expectedCommand: null
   useEffect(() => {
     const step = currentScenario?.steps[currentStep];
-    if (step && step.expectedCommand == null && !isProcessing) {
+    if (step && step.expectedCommand == null && !isProcessing && !subShell) {
       setIsProcessing(true);
       processStepOutput(step);
     }
-  }, [currentStep, currentScenario, isProcessing]);
-
+  }, [currentStep, currentScenario, isProcessing, subShell]);
   const resetScenario = () => {
     setCurrentStep(0);
     setActiveMachine('attacker');
     setHighlightedMachine(null);
     setHighlightedArrow(null);
+    setSubShell(null); 
     
     setAttackerHistory([
       { type: 'system', text: `Welcome to ${currentScenario.network.attacker.hostname}` },
@@ -172,58 +172,85 @@ export default function SimulatorPage({
         { type: 'info', text: "" },
     ]);
   };
-  
-  // --- CORE SIMULATION LOGIC ---
-  
-  // --- [ MODIFICATION 1: UPDATED processStepOutput ] ---
-  // Replaced hardcoded `if (scenarioId === ...)` with a generic `lootToGrant` system.
-  const processStepOutput = async (step) => {
-    const { attackerOutput, serverOutput, delay } = step;
-
-    setHighlightedMachine('target');
-    setHighlightedArrow('attacker-to-target');
-
-    for (let i = 0; i < attackerOutput.length; i++) {
-      await new Promise(resolve => setTimeout(resolve, delay));
-      setAttackerHistory(prev => [
-        ...prev,
-        { type: 'output', text: attackerOutput[i] }
-      ]);
-    }
-
-    for (let i = 0; i < serverOutput.length; i++) {
-      await new Promise(resolve => setTimeout(resolve, delay));
-      setServerHistory(prev => [
-        ...prev,
-        { type: 'log', text: serverOutput[i] }
-      ]);
-    }
-
-    // --- NEW GENERIC LOOT SYSTEM ---
-    // This block replaces the old hardcoded `if (scenarioId === ...)` checks
-    if (step.lootToGrant) {
-      // Grant files to the *simulated file system* (not the Files tab)
-      if (step.lootToGrant.files) {
-        setSimulatedFileSystem(prev => ({
+  const processSubCommandOutput = async (subCommand) => {
+    const { attackerOutput, serverOutput, delay, lootToGrant } = subCommand;
+    if (attackerOutput) {
+      for (let i = 0; i < attackerOutput.length; i++) {
+        await new Promise(resolve => setTimeout(resolve, delay));
+        setAttackerHistory(prev => [
           ...prev,
-          ...step.lootToGrant.files
-        }));
+          { type: 'output', text: attackerOutput[i] }
+        ]);
       }
-      // Grant credentials (passwords/hashes)
-      if (step.lootToGrant.creds) {
-        step.lootToGrant.creds.forEach(cred => {
+    }
+    if (serverOutput) {
+      for (let i = 0; i < serverOutput.length; i++) {
+        await new Promise(resolve => setTimeout(resolve, delay));
+        setServerHistory(prev => [
+          ...prev,
+          { type: 'log', text: serverOutput[i] }
+        ]);
+      }
+    }
+    if (lootToGrant) {
+      if (lootToGrant.files) {
+        setSimulatedFileSystem(prev => ({ ...prev, ...lootToGrant.files }));
+      }
+      if (lootToGrant.creds) {
+        lootToGrant.creds.forEach(cred => {
           harvestCredential(cred.type, cred.username, cred.secret);
         });
       }
-      // Grant files directly to the "Files" tab (for `download` commands)
-      if (step.lootToGrant.download) {
+      if (lootToGrant.download) {
+        lootToGrant.download.forEach(file => {
+          setSimulatedFiles(prev => [...prev, file]);
+        });
+      }
+    }
+    setAttackerHistory(prev => [
+      ...prev,
+      { type: 'sub-prompt', text: getSubShellPrompt(subShell) }
+    ]);
+    
+    setIsProcessing(false);
+  };
+  const processStepOutput = async (step) => {
+    const { attackerOutput, serverOutput, delay, lootToGrant, enterSubShell } = step;
+    setHighlightedMachine('target');
+    setHighlightedArrow('attacker-to-target');
+    if (attackerOutput) {
+      for (let i = 0; i < attackerOutput.length; i++) {
+        await new Promise(resolve => setTimeout(resolve, delay));
+        setAttackerHistory(prev => [
+          ...prev,
+          { type: 'output', text: attackerOutput[i] }
+        ]);
+      }
+    }
+    if (serverOutput) {
+      for (let i = 0; i < serverOutput.length; i++) {
+        await new Promise(resolve => setTimeout(resolve, delay));
+        setServerHistory(prev => [
+          ...prev,
+          { type: 'log', text: serverOutput[i] }
+        ]);
+      }
+    }
+    if (lootToGrant) {
+      if (lootToGrant.files) {
+        setSimulatedFileSystem(prev => ({ ...prev, ...lootToGrant.files }));
+      }
+      if (lootToGrant.creds) {
+        lootToGrant.creds.forEach(cred => {
+          harvestCredential(cred.type, cred.username, cred.secret);
+        });
+      }
+      if (lootToGrant.download) {
         step.lootToGrant.download.forEach(file => {
           setSimulatedFiles(prev => [...prev, file]);
         });
       }
     }
-    // --- END NEW LOOT SYSTEM ---
-
     const defenseAlert = getDefenseAlertForStep(step.id, scenarioId);
     if (defenseAlert) {
         setDefenseHistory(prev => [
@@ -231,50 +258,48 @@ export default function SimulatorPage({
             { type: 'error', text: defenseAlert } 
         ]);
     }
-
     setHighlightedMachine(null);
     setHighlightedArrow(null);
-
-    setIsProcessing(false);
     
-    if (currentStep === currentScenario.steps.length - 1) {
-      completeScenario();
+    if (enterSubShell) {
+      setSubShell(enterSubShell);
+      setAttackerHistory(prev => [
+        ...prev,
+        { type: 'sub-prompt', text: getSubShellPrompt(enterSubShell) }
+      ]);
+      setIsProcessing(false);
     } else {
-      setCurrentStep(prev => prev + 1);
+      setIsProcessing(false);
+      if (currentStep === currentScenario.steps.length - 1) {
+        completeScenario();
+      } else {
+        setCurrentStep(prev => prev + 1);
+      }
     }
   };
-
-
   const completeScenario = () => {
-    // ... (This function is unchanged)
+    // ... (unchanged)
     const timeSpent = Math.round((Date.now() - scenarioStats.startTime) / 1000);
     const scoreEarned = calculateScenarioScore(scenarioStats.wrongAttempts, scenarioStats.hintsUsed);
-    
     let updatedProgress = { ...progress };
     updatedProgress = addScenarioCompletion(updatedProgress, scenarioId, {
       wrongAttempts: scenarioStats.wrongAttempts,
       hintsUsed: scenarioStats.hintsUsed,
       timeSpent
     });
-
     const previousUnlocked = getUnlockedAchievements(progress);
     const newUnlocked = getUnlockedAchievements(updatedProgress);
     const justUnlocked = newUnlocked.filter(id => !previousUnlocked.includes(id));
-    
     justUnlocked.forEach(id => {
       updatedProgress = unlockAchievement(updatedProgress, id);
     });
-
     setProgress(updatedProgress);
     saveProgress(updatedProgress);
-
     const newAchievementObjects = justUnlocked
       .map(id => achievements.find(a => a.id === id))
       .filter(Boolean);
-    
     setNewAchievements(newAchievementObjects);
     setShowMissionDebrief(true);
-
     setScenarioStats(prev => ({
       ...prev,
       scoreEarned,
@@ -282,22 +307,19 @@ export default function SimulatorPage({
       timeSpent: `${Math.floor(timeSpent / 60)}m ${timeSpent % 60}s`
     }));
   };
-
   const resolveLootVariables = (commandString) => {
+    // ... (unchanged)
     const lootRegex = /\[loot:([^\]]+)\]/gi;
     let resolvedCmd = commandString;
-
     const matches = commandString.match(lootRegex);
     if (!matches) {
       return commandString;
     }
-
     for (const match of matches) {
       const usernameToFind = match.replace(lootRegex, '$1').toLowerCase();
       const foundCred = credentialInventory.find(
         (c) => c.username.toLowerCase() === usernameToFind
       );
-
       if (foundCred) {
         resolvedCmd = resolvedCmd.replace(match, foundCred.secret);
       } else {
@@ -306,20 +328,65 @@ export default function SimulatorPage({
     }
     return resolvedCmd;
   };
-
-  // --- [ MODIFICATION 2: UPDATED handleCommandSubmit ] ---
-  // This now checks for 'dir', 'ls', 'cat', 'type' before checking the step command.
   const handleCommandSubmit = (command) => {
+    // ... (This function is unchanged, I'm omitting it for brevity)
+    // It correctly handles main shell, sub-shell, 'ls', and 'cat'
     const normalizedInput = command.trim().toLowerCase();
-    
-    // Always echo the command
-    setAttackerHistory(prev => [
-      ...prev,
-      { type: 'command', text: `root@${currentScenario.network.attacker.hostname}:~# ${command}` }
-    ]);
-
-    // --- NEW: Interactive File System Commands (Pre-check) ---
-    // These commands do NOT advance the step.
+    if (subShell) {
+      setAttackerHistory(prev => [
+        ...prev,
+        { type: 'command', text: `${getSubShellPrompt(subShell)}${command}` }
+      ]);
+    } else {
+      setAttackerHistory(prev => [
+        ...prev,
+        { type: 'command', text: `root@${currentScenario.network.attacker.hostname}:~# ${command}` }
+      ]);
+    }
+    if (subShell) {
+      const step = currentScenario.steps[currentStep];
+      if (normalizedInput === 'exit') {
+        if (step.expectedCommand === 'exit') {
+          setIsProcessing(true);
+          processStepOutput(step); 
+        } else {
+          setSubShell(null);
+          setAttackerHistory(prev => [
+            ...prev,
+            { type: 'output', text: 'Exiting sub-shell...' }
+          ]);
+        }
+        return;
+      }
+      const subCommands = step.subShellCommands?.[subShell]?.commands || [];
+      let subMatch = null;
+      for (const cmdData of subCommands) {
+        const expectedList = Array.isArray(cmdData.expectedCommands)
+          ? cmdData.expectedCommands
+          : [cmdData.expectedCommand];
+        
+        const isMatch = expectedList.some(cmd => {
+          if (!cmd) return false;
+          const resolvedCmd = resolveLootVariables(cmd.trim().toLowerCase());
+          return normalizedInput === resolvedCmd;
+        });
+        if (isMatch) {
+          subMatch = cmdData;
+          break;
+        }
+      }
+      if (subMatch) {
+        setIsProcessing(true);
+        processSubCommandOutput(subMatch);
+      } else {
+        setAttackerHistory(prev => [
+          ...prev,
+          { type: 'error', text: `[!] ${subShell} error: command not recognized: "${command}"` },
+          { type: 'sub-prompt', text: getSubShellPrompt(subShell) }
+        ]);
+      }
+      return;
+    }
     if (normalizedInput === 'ls' || normalizedInput === 'dir') {
       const files = Object.keys(simulatedFileSystem);
       if (files.length === 0) {
@@ -332,9 +399,8 @@ export default function SimulatorPage({
           ...prev, { type: 'output', text: fileList.join('\n') }
         ]);
       }
-      return; // Do not proceed to step check
+      return; 
     }
-
     if (normalizedInput.startsWith('cat ') || normalizedInput.startsWith('type ')) {
       const fileName = command.split(' ')[1];
       const file = simulatedFileSystem[fileName.toLowerCase()];
@@ -347,11 +413,8 @@ export default function SimulatorPage({
           ...prev, { type: 'error', text: `[!] File not found: ${fileName}` }
         ]);
       }
-      return; // Do not proceed to step check
+      return; 
     }
-    // --- End of new pre-checks ---
-
-    // Standard step validation logic
     const step = currentScenario.steps[currentStep];
     if (!step) {
       setAttackerHistory(prev => [
@@ -360,23 +423,18 @@ export default function SimulatorPage({
       ]);
       return;
     }
-
     const expectedList = Array.isArray(step.expectedCommands) && step.expectedCommands.length > 0
       ? step.expectedCommands
       : step.expectedCommand
         ? [step.expectedCommand]
         : [];
-
     const isMatch = expectedList.some(cmd => {
       if (!cmd) return false;
       const resolvedCmd = resolveLootVariables(cmd.trim().toLowerCase());
       return normalizedInput === resolvedCmd;
     });
-
-    // If the input does not match any expected command...
     if (!isMatch) {
       setScenarioStats(prev => ({ ...prev, wrongAttempts: prev.wrongAttempts + 1 }));
-
       const mistakes = Array.isArray(step.commonMistakes) ? step.commonMistakes : [];
       let handledMistake = false;
       for (const mistake of mistakes) {
@@ -393,7 +451,6 @@ export default function SimulatorPage({
           }
         } catch (err) { /* ignore */ }
       }
-
       if (!handledMistake) {
         if (tutorialMode) {
           setAttackerHistory(prev => [
@@ -402,7 +459,6 @@ export default function SimulatorPage({
           ]);
         } else {
           const firstExpectedCmd = expectedList.length > 0 ? resolveLootVariables(expectedList[0]) : '';
-          // Don't show the full resolved command if it's a "download" or "note" command
           const suggestion = (firstExpectedCmd && !firstExpectedCmd.startsWith('download') && !firstExpectedCmd.startsWith('note'))
             ? `Did you mean: ${firstExpectedCmd}?` 
             : '';
@@ -415,19 +471,14 @@ export default function SimulatorPage({
       }
       return;
     }
-
-    // If we reach here, the command was correct
     setIsProcessing(true);
     processStepOutput(step);
   };
-  
   const handleShowHint = (stepIndex) => {
-    // ... (This function is unchanged)
+    // ... (unchanged)
     const step = currentScenario.steps[stepIndex];
     if (!step) return;
-
     const hintLevel = hintsShown[stepIndex] || 0;
-    
     if (hintLevel === 0) {
       setAttackerHistory(prev => [
         ...prev,
@@ -443,9 +494,8 @@ export default function SimulatorPage({
       setHintsShown(prev => ({ ...prev, [stepIndex]: 2 }));
     }
   };
-
   const handleQuizComplete = (quizStats) => {
-    // ... (This function is unchanged)
+    // ... (unchanged)
     let updatedProgress = { ...progress };
     updatedProgress = addQuizScore(
       updatedProgress,
@@ -454,12 +504,10 @@ export default function SimulatorPage({
       quizStats.correctAnswers,
       quizStats.totalQuestions
     );
-    
     setProgress(updatedProgress);
     saveProgress(updatedProgress);
     setShowQuiz(false);
   };
-  
   const handleCloseBriefing = () => {
     setShowMissionBriefing(false);
     safeSetItem(briefingStorageKey, true);
@@ -487,48 +535,65 @@ export default function SimulatorPage({
           
           <div className="main-layout">
             <div className="main-content">
-              <div className="simulation-page-grid">
-                <GuidePanel 
-                  scenario={currentScenario}
-                  currentStep={currentStep}
-                  tutorialMode={tutorialMode}
-                  onTutorialToggle={() => {
-                    const newTutorialMode = !tutorialMode;
-                    setTutorialMode(newTutorialMode);
-                    setProgress(prev => ({ ...prev, tutorialMode: newTutorialMode }));
-                  }}
-                  highlightedMachine={highlightedMachine}
-                  highlightedArrow={highlightedArrow}
-                  onShowBriefing={() => setShowMissionBriefing(true)}
-                  progress={progress}
-                />
-                
-                <AttackerPanel 
-                  history={attackerHistory}
-                  onCommandSubmit={handleCommandSubmit}
-                  isProcessing={isProcessing}
-                  network={currentScenario.network}
-                  activeMachine={activeMachine}
-                  onMachineChange={setActiveMachine}
-                  serverHistory={serverHistory}
-                  defenseHistory={defenseHistory} 
-                  credentialInventory={credentialInventory}
-                  simulatedFiles={simulatedFiles} 
-                  onShowHint={() => handleShowHint(currentStep)}
-                  hintsAvailable={currentStep < currentScenario.steps.length}
-                />
-              </div>
+              
+              {/* --- NEW: Replaced the static grid div with ResizablePanelGroup --- */}
+              <ResizablePanelGroup
+                direction="horizontal"
+                className="simulation-page-grid" // We'll keep this class for styling
+              >
+                {/* Panel 1: Guide */}
+                <ResizablePanel defaultSize={30} minSize={20}>
+                  <GuidePanel 
+                    scenario={currentScenario}
+                    currentStep={currentStep}
+                    tutorialMode={tutorialMode}
+                    onTutorialToggle={() => {
+                      const newTutorialMode = !tutorialMode;
+                      setTutorialMode(newTutorialMode);
+                      setProgress(prev => ({ ...prev, tutorialMode: newTutorialMode }));
+                    }}
+                    highlightedMachine={highlightedMachine}
+                    highlightedArrow={highlightedArrow}
+                    onShowBriefing={() => setShowMissionBriefing(true)}
+                    progress={progress}
+                  />
+                </ResizablePanel>
+
+                {/* The Handle */}
+                <ResizableHandle withHandle />
+
+                {/* Panel 2: Terminal */}
+                <ResizablePanel defaultSize={70} minSize={30}>
+                  <AttackerPanel 
+                    history={attackerHistory}
+                    onCommandSubmit={handleCommandSubmit}
+                    isProcessing={isProcessing}
+                    network={currentScenario.network}
+                    activeMachine={activeMachine}
+                    onMachineChange={setActiveMachine}
+                    serverHistory={serverHistory}
+                    defenseHistory={defenseHistory} 
+                    credentialInventory={credentialInventory}
+                    simulatedFiles={simulatedFiles} 
+                    onShowHint={() => handleShowHint(currentStep)}
+                    hintsAvailable={currentStep < currentScenario.steps.length}
+                    subShell={subShell}
+                  />
+                </ResizablePanel>
+
+              </ResizablePanelGroup>
+              {/* --- END of replacement --- */}
+
             </div>
           </div>
 
-          {/* Modals */}
+          {/* ... (All Modals remain the same) ... */}
           <MissionModal
             isOpen={showMissionBriefing}
             onClose={handleCloseBriefing}
             type="briefing"
             scenario={currentScenario}
           />
-
           <MissionModal
             isOpen={showMissionDebrief}
             onClose={() => {
@@ -542,7 +607,6 @@ export default function SimulatorPage({
             stats={scenarioStats}
             newAchievements={newAchievements}
           />
-
           {showQuiz && (
             <div className="modal-backdrop">
               <div className="modal-content quiz-modal">
@@ -554,7 +618,6 @@ export default function SimulatorPage({
               </div>
             </div>
           )}
-
           {showAchievements && (
             <div className="modal-backdrop">
               <div className="modal-content achievements-modal">
@@ -565,7 +628,6 @@ export default function SimulatorPage({
               </div>
             </div>
           )}
-
           <SettingsModal 
               isOpen={isSettingsOpen}
               onClose={() => setIsSettingsOpen(false)}
