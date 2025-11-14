@@ -4,7 +4,7 @@ import { Streamdown } from 'streamdown';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import NetworkMap from './NetworkMap';
 
-// ... (getInitialCollapseState and compromiseMap helpers remain the same) ...
+// --- Helper Functions ---
 const GUIDE_COLLAPSE_KEY = 'guide_panel_open';
 const NETWORK_COLLAPSE_KEY = 'network_map_open';
 
@@ -23,8 +23,8 @@ const compromiseMap = {
   'dcsync': ['dc'],
   'golden-ticket': ['dc']
 };
-// ----------------------------------------------------
 
+// --- Main Component ---
 export default function GuidePanel({ 
   scenario, 
   currentStep, 
@@ -33,12 +33,12 @@ export default function GuidePanel({
   highlightedMachine,
   highlightedArrow,
   progress,
-  onNodeClick // <-- 1. ACCEPT THE NEW PROP
+  onNodeClick
 }) {
   const { guide } = scenario;
   const currentGuideStep = guide.steps[currentStep];
 
-  // ... (state and handlers remain the same) ...
+  // --- Local State ---
   const [isNetworkOpen, setIsNetworkOpen] = useState(() => getInitialCollapseState(NETWORK_COLLAPSE_KEY));
   const [isGuideOpen, setIsGuideOpen] = useState(() => getInitialCollapseState(GUIDE_COLLAPSE_KEY));
   
@@ -56,6 +56,7 @@ export default function GuidePanel({
       } catch (e) { /* ignore */ }
   };
 
+  // --- Compute compromised nodes ---
   const compromisedNodes = useMemo(() => {
     const nodes = new Set();
     nodes.add('attacker'); 
@@ -69,10 +70,11 @@ export default function GuidePanel({
     return Array.from(nodes);
   }, [progress]);
 
+  // --- RENDERING (WITH FIX) ---
   return (
-    <div className="panel guide-panel flex flex-col gap-4">
+    <div className="panel guide-panel flex flex-col gap-4 h-full overflow-hidden">
         
-        {/* 1. Network Topology Panel (Collapsible) */}
+        {/* 1. Network Topology Panel (Collapsible, Fixed Height, Doesn't Grow) */}
         <Collapsible 
             open={isNetworkOpen}
             onOpenChange={handleNetworkToggle}
@@ -82,7 +84,10 @@ export default function GuidePanel({
                 <Network size={20} />
                 <h2 className="!text-sm !font-medium flex-1">Network Topology</h2>
                 <CollapsibleTrigger asChild>
-                    <button title="Toggle Network Topology" className="text-server-text hover:text-accent-color transition">
+                    <button 
+                        title="Toggle Network Topology" 
+                        className="text-server-text hover:text-accent-color transition"
+                    >
                         <ChevronDown size={20} className="collapsible-icon" />
                     </button>
                 </CollapsibleTrigger>
@@ -94,21 +99,25 @@ export default function GuidePanel({
                         highlightedArrow={highlightedArrow}
                         network={scenario.network}
                         compromisedNodes={compromisedNodes}
-                        onNodeClick={onNodeClick} // <-- 2. PASS THE PROP DOWN
+                        onNodeClick={onNodeClick}
                     />
                 </div>
             </CollapsibleContent>
         </Collapsible>
         
-        {/* 2. Attack Guide Panel (Main Content) */}
-        {/* ... (rest of the file is unchanged) ... */}
+        {/* 
+          2. Attack Guide Panel (Main Content) 
+          FIXED: Uses flex-1 + overflow-hidden + min-h-0 to fill remaining space
+          and scroll internally without affecting page height
+        */}
         <div className="flex-1 border border-border-color rounded-lg overflow-hidden flex flex-col min-h-0">
             <Collapsible 
                 open={isGuideOpen}
                 onOpenChange={handleGuideToggle}
-                className="flex-1 flex flex-col min-h-0"
+                className="flex-1 flex flex-col min-h-0 overflow-hidden"
             >
-                <div className="panel-header !bg-transparent !border-b !border-border-color relative">
+                {/* Header - Fixed, always visible */}
+                <div className="panel-header !bg-transparent !border-b !border-border-color relative flex-shrink-0">
                     <BookOpen size={20} />
                     <h2 className="!text-sm !font-medium flex-1">Attack Guide</h2>
                     
@@ -126,14 +135,20 @@ export default function GuidePanel({
                     )}
                     
                     <CollapsibleTrigger asChild>
-                        <button title="Toggle Guide Visibility" className="text-server-text hover:text-accent-color transition">
+                        <button 
+                            title="Toggle Guide Visibility" 
+                            className="text-server-text hover:text-accent-color transition"
+                        >
                             <ChevronDown size={20} className="collapsible-icon" />
                         </button>
                     </CollapsibleTrigger>
                 </div>
                 
-                <CollapsibleContent className="flex-1 overflow-y-auto">
+                {/* Content - Scrolls internally, doesn't affect page height */}
+                <CollapsibleContent className="flex-1 overflow-y-auto min-h-0">
                     <div className="panel-content !p-4">
+                        
+                        {/* Overview Section */}
                         <section className="guide-section">
                             <h3 className="guide-section-title">Overview</h3>
                             <div className="guide-text">
@@ -141,6 +156,7 @@ export default function GuidePanel({
                             </div>
                         </section>
 
+                        {/* Current Step Section */}
                         {currentGuideStep && (
                             <section className="guide-section current-step">
                                 <h3 className="guide-section-title">
@@ -151,6 +167,7 @@ export default function GuidePanel({
                                     <p>{currentGuideStep.description}</p>
                                 </div>
                                 
+                                {/* Command to Execute */}
                                 {currentGuideStep.command && (
                                     <div className="command-box">
                                         <div className="command-box-header">
@@ -161,6 +178,7 @@ export default function GuidePanel({
                                     </div>
                                 )}
                                 
+                                {/* Tutorial Mode Hint */}
                                 {tutorialMode && currentGuideStep.hintShort && (
                                     <div className="tip-box">
                                         <Lightbulb size={16} />
@@ -168,6 +186,7 @@ export default function GuidePanel({
                                     </div>
                                 )}
                                 
+                                {/* General Tip */}
                                 {currentGuideStep.tip && (
                                     <div className="tip-box">
                                         <Lightbulb size={16} />
@@ -177,6 +196,7 @@ export default function GuidePanel({
                             </section>
                         )}
 
+                        {/* All Steps Section */}
                         <section className="guide-section">
                             <h3 className="guide-section-title">All Steps</h3>
                             <ol className="steps-list">

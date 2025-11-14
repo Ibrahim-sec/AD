@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react'; // Added useMemo
+import { useState, useEffect, useMemo } from 'react';
 import { Redirect, Link } from 'wouter';
 import Header from './Header';
 import GuidePanel from './GuidePanel';
@@ -22,10 +22,9 @@ import {
   ResizableHandle,
 } from "@/components/ui/resizable";
 
-// --- 1. NEW: Import the new Sheet component ---
 import MachineInfoSheet from './MachineInfoSheet'; 
 
-// ... (Helper functions remain the same) ...
+// --- Helper Functions ---
 const calculateScenarioScore = (wrongAttempts, hintsUsed) => {
     if (wrongAttempts === 0 && hintsUsed === 0) {
       return 10;
@@ -36,6 +35,7 @@ const calculateScenarioScore = (wrongAttempts, hintsUsed) => {
     }
     return 0;
 };
+
 const getDefenseAlertForStep = (stepId, scenarioId) => {
     if (scenarioId === 'kerberoasting') {
         if (stepId === 1) return "[DEFENSE] ALERT: LDAP Query pattern detected (SPN enumeration).";
@@ -45,15 +45,16 @@ const getDefenseAlertForStep = (stepId, scenarioId) => {
         if (stepId === 3) return "[DEFENSE] ALERT: Unusual NTLM authentication without password detected (PtH).";
     }
     return null;
-}
+};
+
 const getSubShellPrompt = (shell) => {
   if (shell === 'mimikatz') {
     return 'mimikatz # ';
   }
   return '> ';
-}
-// --------------------------------------------------
+};
 
+// --- Main Component ---
 export default function SimulatorPage({ 
   scenarioId, 
   allScenarios,
@@ -91,7 +92,6 @@ export default function SimulatorPage({
     }
   });
 
-  
   // --- MODAL / GAME STATE ---
   const briefingStorageKey = `hasSeenBriefing_${scenarioId}`;
   const [showMissionBriefing, setShowMissionBriefing] = useState(() => {
@@ -111,15 +111,15 @@ export default function SimulatorPage({
   const [tutorialMode, setTutorialMode] = useState(progress.tutorialMode);
   const [hintsShown, setHintsShown] = useState({});
 
-  // --- 2. NEW: State for the inspection sheet ---
-  const [inspectingNode, setInspectingNode] = useState(null); // 'attacker', 'target', or 'dc'
+  // --- State for machine inspection sheet ---
+  const [inspectingNode, setInspectingNode] = useState(null);
 
-  // Redirect if scenario doesn't exist
+  // --- Redirect if scenario doesn't exist ---
   if (!currentScenario) {
     return <Redirect to="/" />;
   }
   
-  // --- HANDLERS ---
+  // --- EVENT HANDLERS ---
   
   const handleUpdateTheme = (newTheme) => {
     setCustomTheme(newTheme);
@@ -141,7 +141,7 @@ export default function SimulatorPage({
     setSimulatedFiles([]);
     setSimulatedFileSystem({});
     setSubShell(null); 
-    setInspectingNode(null); // Reset inspection state on new scenario
+    setInspectingNode(null);
     
     const hasSeen = safeGetItem(briefingStorageKey, null);
     setShowMissionBriefing(hasSeen !== true);
@@ -156,7 +156,7 @@ export default function SimulatorPage({
     setHintsShown({});
   }, [scenarioId, briefingStorageKey]); 
 
-  // Auto-advances steps with expectedCommand: null
+  // --- Auto-advance steps with expectedCommand: null ---
   useEffect(() => {
     const step = currentScenario?.steps[currentStep];
     if (step && step.expectedCommand == null && !isProcessing && !subShell) { 
@@ -260,6 +260,7 @@ export default function SimulatorPage({
         ]);
       }
     }
+    
     if (serverOutput) {
       for (let i = 0; i < serverOutput.length; i++) {
         await new Promise(resolve => setTimeout(resolve, delay));
@@ -269,6 +270,7 @@ export default function SimulatorPage({
         ]);
       }
     }
+    
     if (lootToGrant) {
       if (lootToGrant.files) {
         setSimulatedFileSystem(prev => ({ ...prev, ...lootToGrant.files }));
@@ -313,9 +315,7 @@ export default function SimulatorPage({
     }
   };
 
-
   const completeScenario = () => {
-    // ... (This function is unchanged)
     const timeSpent = Math.round((Date.now() - scenarioStats.startTime) / 1000);
     const scoreEarned = calculateScenarioScore(scenarioStats.wrongAttempts, scenarioStats.hintsUsed);
     
@@ -353,7 +353,6 @@ export default function SimulatorPage({
   };
 
   const resolveLootVariables = (commandString) => {
-    // ... (This function is unchanged)
     const lootRegex = /\[loot:([^\]]+)\]/gi;
     let resolvedCmd = commandString;
 
@@ -378,8 +377,8 @@ export default function SimulatorPage({
   };
 
   const handleCommandSubmit = (command) => {
-    // ... (This function is unchanged, I'm omitting it for brevity)
     const normalizedInput = command.trim().toLowerCase();
+    
     if (subShell) {
       setAttackerHistory(prev => [
         ...prev,
@@ -391,6 +390,7 @@ export default function SimulatorPage({
         { type: 'command', text: `root@${currentScenario.network.attacker.hostname}:~# ${command}` }
       ]);
     }
+    
     if (subShell) {
       const step = currentScenario.steps[currentStep];
       if (normalizedInput === 'exit') {
@@ -406,6 +406,7 @@ export default function SimulatorPage({
         }
         return;
       }
+      
       const subCommands = step.subShellCommands?.[subShell]?.commands || [];
       let subMatch = null;
       for (const cmdData of subCommands) {
@@ -435,6 +436,7 @@ export default function SimulatorPage({
       }
       return;
     }
+    
     if (normalizedInput === 'ls' || normalizedInput === 'dir') {
       const files = Object.keys(simulatedFileSystem);
       if (files.length === 0) {
@@ -449,6 +451,7 @@ export default function SimulatorPage({
       }
       return; 
     }
+    
     if (normalizedInput.startsWith('cat ') || normalizedInput.startsWith('type ')) {
       const fileName = command.split(' ')[1];
       const file = simulatedFileSystem[fileName.toLowerCase()];
@@ -463,6 +466,7 @@ export default function SimulatorPage({
       }
       return; 
     }
+    
     const step = currentScenario.steps[currentStep];
     if (!step) {
       setAttackerHistory(prev => [
@@ -471,20 +475,24 @@ export default function SimulatorPage({
       ]);
       return;
     }
+    
     const expectedList = Array.isArray(step.expectedCommands) && step.expectedCommands.length > 0
       ? step.expectedCommands
       : step.expectedCommand
         ? [step.expectedCommand]
         : [];
+    
     const isMatch = expectedList.some(cmd => {
       if (!cmd) return false;
       const resolvedCmd = resolveLootVariables(cmd.trim().toLowerCase());
       return normalizedInput === resolvedCmd;
     });
+    
     if (!isMatch) {
       setScenarioStats(prev => ({ ...prev, wrongAttempts: prev.wrongAttempts + 1 }));
       const mistakes = Array.isArray(step.commonMistakes) ? step.commonMistakes : [];
       let handledMistake = false;
+      
       for (const mistake of mistakes) {
         if (!mistake || !mistake.pattern) continue;
         try {
@@ -499,6 +507,7 @@ export default function SimulatorPage({
           }
         } catch (err) { /* ignore */ }
       }
+      
       if (!handledMistake) {
         if (tutorialMode) {
           setAttackerHistory(prev => [
@@ -519,14 +528,15 @@ export default function SimulatorPage({
       }
       return;
     }
+    
     setIsProcessing(true);
     processStepOutput(step);
   };
   
   const handleShowHint = (stepIndex) => {
-    // ... (This function is unchanged)
     const step = currentScenario.steps[stepIndex];
     if (!step) return;
+    
     const hintLevel = hintsShown[stepIndex] || 0;
     if (hintLevel === 0) {
       setAttackerHistory(prev => [
@@ -545,7 +555,6 @@ export default function SimulatorPage({
   };
 
   const handleQuizComplete = (quizStats) => {
-    // ... (This function is unchanged)
     let updatedProgress = { ...progress };
     updatedProgress = addQuizScore(
       updatedProgress,
@@ -564,17 +573,15 @@ export default function SimulatorPage({
     safeSetItem(briefingStorageKey, true);
   };
   
-  // --- 3. NEW: Helper to get compromised nodes for the sheet ---
+  // --- Helper to get compromised nodes ---
   const compromisedNodes = useMemo(() => {
     const nodes = new Set();
     nodes.add('attacker'); 
     
-    // This map defines which scenarios compromise which nodes
     const compromiseMap = {
-      'pass-the-hash': ['target', 'dc'], // 'target' is the ID for the Internal Server
+      'pass-the-hash': ['target', 'dc'],
       'dcsync': ['dc'],
       'golden-ticket': ['dc']
-      // Add more as needed
     };
 
     if (progress && progress.scenariosCompleted) {
@@ -586,9 +593,8 @@ export default function SimulatorPage({
     }
     return Array.from(nodes);
   }, [progress]);
-  // ---------------------------------------------------------
 
-  // --- RENDERING ---
+  // --- RENDERING (WITH FIX) ---
   return (
     <div className="simulator-container full-page">
       <div 
@@ -597,8 +603,9 @@ export default function SimulatorPage({
               '--accent-color': customTheme.accentColor || '',
               '--terminal-bg': customTheme.terminalBg || '',
           }}
-          className="h-full w-full flex flex-col"
+          className="h-screen w-full flex flex-col overflow-hidden"
       >
+          {/* FIXED: Header is fixed height, doesn't scroll */}
           <Header 
             title={currentScenario.title}
             currentStep={currentStep + 1}
@@ -608,59 +615,55 @@ export default function SimulatorPage({
             onOpenSettings={() => setIsSettingsOpen(true)}
           />
           
-          <div className="main-layout">
-            <div className="main-content">
-              
-              <ResizablePanelGroup
-                direction="horizontal"
-                className="simulation-page-grid"
-              >
-                {/* Panel 1: Guide */}
-                <ResizablePanel defaultSize={30} minSize={20}>
-                  <GuidePanel 
-                    scenario={currentScenario}
-                    currentStep={currentStep}
-                    tutorialMode={tutorialMode}
-                    onTutorialToggle={() => {
-                      const newTutorialMode = !tutorialMode;
-                      setTutorialMode(newTutorialMode);
-                      setProgress(prev => ({ ...prev, tutorialMode: newTutorialMode }));
-                    }}
-                    highlightedMachine={highlightedMachine}
-                    highlightedArrow={highlightedArrow}
-                    onShowBriefing={() => setShowMissionBriefing(true)}
-                    progress={progress}
-                    
-                    // --- 4. NEW: Pass the click handler down ---
-                    onNodeClick={setInspectingNode}
-                  />
-                </ResizablePanel>
+          {/* FIXED: Main content area - takes remaining viewport space, never grows beyond it */}
+          <main className="flex-1 flex overflow-hidden min-h-0">
+            <ResizablePanelGroup
+              direction="horizontal"
+              className="w-full"
+            >
+              {/* Left Panel: Guide */}
+              <ResizablePanel defaultSize={30} minSize={20}>
+                <GuidePanel 
+                  scenario={currentScenario}
+                  currentStep={currentStep}
+                  tutorialMode={tutorialMode}
+                  onTutorialToggle={() => {
+                    const newTutorialMode = !tutorialMode;
+                    setTutorialMode(newTutorialMode);
+                    setProgress(prev => ({ ...prev, tutorialMode: newTutorialMode }));
+                  }}
+                  highlightedMachine={highlightedMachine}
+                  highlightedArrow={highlightedArrow}
+                  onShowBriefing={() => setShowMissionBriefing(true)}
+                  progress={progress}
+                  onNodeClick={setInspectingNode}
+                />
+              </ResizablePanel>
 
-                <ResizableHandle withHandle />
+              <ResizableHandle withHandle />
 
-                {/* Panel 2: Terminal */}
-                <ResizablePanel defaultSize={70} minSize={30}>
-                  <AttackerPanel 
-                    history={attackerHistory}
-                    onCommandSubmit={handleCommandSubmit}
-                    isProcessing={isProcessing}
-                    network={currentScenario.network}
-                    activeMachine={activeMachine}
-                    onMachineChange={setActiveMachine}
-                    serverHistory={serverHistory}
-                    defenseHistory={defenseHistory} 
-                    credentialInventory={credentialInventory}
-                    simulatedFiles={simulatedFiles} 
-                    onShowHint={() => handleShowHint(currentStep)}
-                    hintsAvailable={currentStep < currentScenario.steps.length}
-                    subShell={subShell}
-                  />
-                </ResizablePanel>
-              </ResizablePanelGroup>
-            </div>
-          </div>
+              {/* Right Panel: Terminal */}
+              <ResizablePanel defaultSize={70} minSize={30}>
+                <AttackerPanel 
+                  history={attackerHistory}
+                  onCommandSubmit={handleCommandSubmit}
+                  isProcessing={isProcessing}
+                  network={currentScenario.network}
+                  activeMachine={activeMachine}
+                  onMachineChange={setActiveMachine}
+                  serverHistory={serverHistory}
+                  defenseHistory={defenseHistory} 
+                  credentialInventory={credentialInventory}
+                  simulatedFiles={simulatedFiles} 
+                  onShowHint={() => handleShowHint(currentStep)}
+                  hintsAvailable={currentStep < currentScenario.steps.length}
+                  subShell={subShell}
+                />
+              </ResizablePanel>
+            </ResizablePanelGroup>
+          </main>
 
-          {/* ... (Modals: Mission, Quiz, Achievements, Settings) ... */}
+          {/* Modals (portaled, not affected by main overflow) */}
           <MissionModal
             isOpen={showMissionBriefing}
             onClose={handleCloseBriefing}
@@ -708,7 +711,7 @@ export default function SimulatorPage({
               onUpdateTheme={handleUpdateTheme}
           />
           
-          {/* --- 5. NEW: Render the Sheet component --- */}
+          {/* Machine Info Sheet */}
           <MachineInfoSheet
             nodeName={inspectingNode}
             network={currentScenario.network}
