@@ -183,3 +183,36 @@
     }
   }
 }
+
+@keyframes pulse-ring {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.3;
+  }
+}
+
+@keyframes packet-flow {
+  from {
+    offset-distance: 0%;
+  }
+  to {
+    offset-distance: 100%;
+  }
+}
+
+.network-node-compromised {
+  animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Smooth pan/zoom */
+.react-transform-wrapper {
+  cursor: grab !important;
+}
+
+.react-transform-wrapper:active {
+  cursor: grabbing !important;
+}
