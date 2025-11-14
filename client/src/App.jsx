@@ -6,6 +6,7 @@ import { AlertTriangle, RefreshCw } from 'lucide-react';
 import SimulatorPage from './components/SimulatorPage';
 import ScenarioEditor from './components/ScenarioEditor';
 import HomePage from './components/HomePage';
+import KnowledgeBase from './components/KnowledgeBase';
 import { scenarios, scenarioMap } from './data/scenarios/index.js';
 import { loadProgress, saveProgress } from './lib/progressTracker.js';
 import { checkStorageHealth } from './lib/safeStorage.js';
@@ -115,8 +116,6 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [storageWarning, setStorageWarning] = useState(null);
 
-  // ========== INITIALIZE APP ==========
-  
   useEffect(() => {
     initializeApp();
   }, []);
@@ -161,15 +160,11 @@ export default function App() {
     }
   };
 
-  // ========== HANDLE PROGRESS UPDATE ==========
-  
   const handleProgressUpdate = (newProgress) => {
     setProgress(newProgress);
     saveProgress(newProgress);
   };
 
-  // ========== LOADING STATE ==========
-  
   if (isLoading) {
     return (
       <div className="min-h-screen bg-[#0a0b0d] flex items-center justify-center">
@@ -183,8 +178,6 @@ export default function App() {
     );
   }
 
-  // ========== NO PROGRESS STATE ==========
-  
   if (!progress) {
     return (
       <div className="min-h-screen bg-[#0a0b0d] flex items-center justify-center p-4">
@@ -207,13 +200,9 @@ export default function App() {
     );
   }
 
-  // ========== RENDER APP ==========
-  
   return (
     <ErrorBoundary showDetails={process.env.NODE_ENV === 'development'}>
-      {/* NO RESTRICTING CONTAINER - Let pages scroll naturally */}
       <div>
-        {/* Storage Warning Banner */}
         {storageWarning && (
           <div className={`fixed top-0 left-0 right-0 z-50 px-4 py-3 text-center text-sm ${
             storageWarning.type === 'error' 
@@ -230,9 +219,7 @@ export default function App() {
           </div>
         )}
 
-        {/* Main Content */}
         <Switch>
-          {/* Home Page */}
           <Route path="/">
             <HomePage 
               scenarios={scenarios}
@@ -242,7 +229,10 @@ export default function App() {
             />
           </Route>
 
-          {/* Scenario Routes */}
+          <Route path="/knowledge">
+            <KnowledgeBase />
+          </Route>
+
           <Route path="/scenario/:scenarioId">
             {(params) => {
               const scenario = scenarioMap[params.scenarioId];
@@ -264,12 +254,10 @@ export default function App() {
             }}
           </Route>
 
-          {/* Scenario Editor */}
           <Route path="/editor">
             <ScenarioEditor />
           </Route>
 
-          {/* 404 Not Found */}
           <Route>
             <NotFound />
           </Route>
@@ -278,10 +266,6 @@ export default function App() {
     </ErrorBoundary>
   );
 }
-
-// ============================================================================
-// 404 NOT FOUND COMPONENT
-// ============================================================================
 
 function NotFound() {
   return (
