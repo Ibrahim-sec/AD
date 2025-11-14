@@ -1,4 +1,4 @@
-export default function NetworkMap({ highlightedMachine, highlightedArrow, network, compromisedNodes = [] }) {
+export default function NetworkMap({ highlightedMachine, highlightedArrow, network, compromisedNodes = [], onNodeClick }) {
   // Allow scenario-specific network data to override default IPs
   const attackerIp = network?.attacker?.ip || '10.0.0.5';
   const targetIp = network?.target?.ip || '10.0.1.10';
@@ -19,7 +19,10 @@ export default function NetworkMap({ highlightedMachine, highlightedArrow, netwo
         preserveAspectRatio="xMidYMid meet"
       >
         {/* Attacker Machine */}
-        <g className={`machine ${highlightedMachine === 'attacker' ? 'highlighted' : ''} ${isAttackerCompromised ? 'compromised' : ''}`}>
+        <g 
+          className={`machine ${highlightedMachine === 'attacker' ? 'highlighted' : ''} ${isAttackerCompromised ? 'compromised' : ''}`}
+          onClick={() => onNodeClick('attacker')}
+        >
           <rect x="50" y="30" width="120" height="60" rx="8" />
           <text x="110" y="65" textAnchor="middle" className="machine-label">
             Attacker
@@ -39,7 +42,10 @@ export default function NetworkMap({ highlightedMachine, highlightedArrow, netwo
         </g>
 
         {/* Internal/Target Server */}
-        <g className={`machine ${highlightedMachine === 'target' ? 'highlighted' : ''} ${isInternalCompromised ? 'compromised' : ''}`}>
+        <g 
+          className={`machine ${highlightedMachine === 'target' ? 'highlighted' : ''} ${isInternalCompromised ? 'compromised' : ''}`}
+          onClick={() => onNodeClick('target')}
+        >
           <rect x="280" y="30" width="120" height="60" rx="8" />
           <text x="340" y="65" textAnchor="middle" className="machine-label">
             Internal Server
@@ -59,7 +65,10 @@ export default function NetworkMap({ highlightedMachine, highlightedArrow, netwo
         </g>
 
         {/* Domain Controller */}
-        <g className={`machine ${highlightedMachine === 'dc' ? 'highlighted' : ''} ${isDcCompromised ? 'compromised' : ''}`}>
+        <g 
+          className={`machine ${highlightedMachine === 'dc' ? 'highlighted' : ''} ${isDcCompromised ? 'compromised' : ''}`}
+          onClick={() => onNodeClick('dc')}
+        >
           <rect x="510" y="30" width="120" height="60" rx="8" />
           <text x="570" y="65" textAnchor="middle" className="machine-label">
             Domain Controller

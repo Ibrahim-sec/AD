@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react'; // Added useMemo
 import { Redirect, Link } from 'wouter';
 import Header from './Header';
 import GuidePanel from './GuidePanel';
@@ -16,14 +16,14 @@ import {
   unlockAchievement
 } from '../lib/progressTracker.js';
 import { safeGetItem, safeSetItem } from '../lib/safeStorage.js';
-
-// --- NEW: Import Resizable Components ---
 import {
   ResizablePanelGroup,
   ResizablePanel,
   ResizableHandle,
 } from "@/components/ui/resizable";
-// ----------------------------------------
+
+// --- 1. NEW: Import the new Sheet component ---
+import MachineInfoSheet from './MachineInfoSheet'; 
 
 // ... (Helper functions remain the same) ...
 const calculateScenarioScore = (wrongAttempts, hintsUsed) => {
@@ -62,8 +62,9 @@ export default function SimulatorPage({
   appMode, 
   setAppMode,
 }) {
-  // ... (All state variables remain the same) ...
   const currentScenario = allScenarios[scenarioId];
+
+  // --- LOCAL SIMULATOR STATE ---
   const [currentStep, setCurrentStep] = useState(0);
   const [attackerHistory, setAttackerHistory] = useState([]);
   const [serverHistory, setServerHistory] = useState([]);
@@ -71,11 +72,16 @@ export default function SimulatorPage({
   const [activeMachine, setActiveMachine] = useState('attacker');
   const [highlightedMachine, setHighlightedMachine] = useState(null);
   const [highlightedArrow, setHighlightedArrow] = useState(null);
+  
+  // --- Loot & File System State ---
   const [defenseHistory, setDefenseHistory] = useState([]);
   const [credentialInventory, setCredentialInventory] = useState([]);
   const [simulatedFiles, setSimulatedFiles] = useState([]);
   const [simulatedFileSystem, setSimulatedFileSystem] = useState({});
-  const [subShell, setSubShell] = useState(null);
+  
+  // --- Sub-shell state ---
+  const [subShell, setSubShell] = useState(null); 
+  
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [customTheme, setCustomTheme] = useState(() => {
     try {
@@ -84,11 +90,15 @@ export default function SimulatorPage({
         return {};
     }
   });
+
+  
+  // --- MODAL / GAME STATE ---
   const briefingStorageKey = `hasSeenBriefing_${scenarioId}`;
   const [showMissionBriefing, setShowMissionBriefing] = useState(() => {
     const hasSeen = safeGetItem(briefingStorageKey, null);
     return hasSeen !== true;
   }); 
+  
   const [showMissionDebrief, setShowMissionDebrief] = useState(false);
   const [showQuiz, setShowQuiz] = useState(false);
   const [showAchievements, setShowAchievements] = useState(false);
@@ -101,15 +111,21 @@ export default function SimulatorPage({
   const [tutorialMode, setTutorialMode] = useState(progress.tutorialMode);
   const [hintsShown, setHintsShown] = useState({});
 
+  // --- 2. NEW: State for the inspection sheet ---
+  const [inspectingNode, setInspectingNode] = useState(null); // 'attacker', 'target', or 'dc'
+
+  // Redirect if scenario doesn't exist
   if (!currentScenario) {
     return <Redirect to="/" />;
   }
   
-  // ... (All handler functions remain the same) ...
+  // --- HANDLERS ---
+  
   const handleUpdateTheme = (newTheme) => {
     setCustomTheme(newTheme);
     localStorage.setItem('terminal_theme', JSON.stringify(newTheme));
   };
+
   const harvestCredential = (type, username, secret) => {
       setCredentialInventory(prev => {
           const newCred = { id: Date.now(), type, username, secret };
@@ -117,15 +133,19 @@ export default function SimulatorPage({
           return [...prev, newCred];
       });
   };
+
+  // --- Initialize/Reset State ---
   useEffect(() => {
     resetScenario();
     setCredentialInventory([]); 
     setSimulatedFiles([]);
     setSimulatedFileSystem({});
     setSubShell(null); 
+    setInspectingNode(null); // Reset inspection state on new scenario
     
     const hasSeen = safeGetItem(briefingStorageKey, null);
     setShowMissionBriefing(hasSeen !== true);
+
     setShowMissionDebrief(false);
     setShowQuiz(false);
     setScenarioStats({
@@ -135,13 +155,16 @@ export default function SimulatorPage({
     });
     setHintsShown({});
   }, [scenarioId, briefingStorageKey]); 
+
+  // Auto-advances steps with expectedCommand: null
   useEffect(() => {
     const step = currentScenario?.steps[currentStep];
-    if (step && step.expectedCommand == null && !isProcessing && !subShell) {
+    if (step && step.expectedCommand == null && !isProcessing && !subShell) { 
       setIsProcessing(true);
       processStepOutput(step);
     }
   }, [currentStep, currentScenario, isProcessing, subShell]);
+
   const resetScenario = () => {
     setCurrentStep(0);
     setActiveMachine('attacker');
@@ -172,8 +195,12 @@ export default function SimulatorPage({
         { type: 'info', text: "" },
     ]);
   };
+  
+  // --- CORE SIMULATION LOGIC ---
+  
   const processSubCommandOutput = async (subCommand) => {
     const { attackerOutput, serverOutput, delay, lootToGrant } = subCommand;
+
     if (attackerOutput) {
       for (let i = 0; i < attackerOutput.length; i++) {
         await new Promise(resolve => setTimeout(resolve, delay));
@@ -183,6 +210,7 @@ export default function SimulatorPage({
         ]);
       }
     }
+    
     if (serverOutput) {
       for (let i = 0; i < serverOutput.length; i++) {
         await new Promise(resolve => setTimeout(resolve, delay));
@@ -192,6 +220,7 @@ export default function SimulatorPage({
         ]);
       }
     }
+
     if (lootToGrant) {
       if (lootToGrant.files) {
         setSimulatedFileSystem(prev => ({ ...prev, ...lootToGrant.files }));
@@ -207,6 +236,7 @@ export default function SimulatorPage({
         });
       }
     }
+    
     setAttackerHistory(prev => [
       ...prev,
       { type: 'sub-prompt', text: getSubShellPrompt(subShell) }
@@ -214,10 +244,13 @@ export default function SimulatorPage({
     
     setIsProcessing(false);
   };
+  
   const processStepOutput = async (step) => {
     const { attackerOutput, serverOutput, delay, lootToGrant, enterSubShell } = step;
+
     setHighlightedMachine('target');
     setHighlightedArrow('attacker-to-target');
+
     if (attackerOutput) {
       for (let i = 0; i < attackerOutput.length; i++) {
         await new Promise(resolve => setTimeout(resolve, delay));
@@ -251,6 +284,7 @@ export default function SimulatorPage({
         });
       }
     }
+
     const defenseAlert = getDefenseAlertForStep(step.id, scenarioId);
     if (defenseAlert) {
         setDefenseHistory(prev => [
@@ -258,6 +292,7 @@ export default function SimulatorPage({
             { type: 'error', text: defenseAlert } 
         ]);
     }
+
     setHighlightedMachine(null);
     setHighlightedArrow(null);
     
@@ -277,29 +312,38 @@ export default function SimulatorPage({
       }
     }
   };
+
+
   const completeScenario = () => {
-    // ... (unchanged)
+    // ... (This function is unchanged)
     const timeSpent = Math.round((Date.now() - scenarioStats.startTime) / 1000);
     const scoreEarned = calculateScenarioScore(scenarioStats.wrongAttempts, scenarioStats.hintsUsed);
+    
     let updatedProgress = { ...progress };
     updatedProgress = addScenarioCompletion(updatedProgress, scenarioId, {
       wrongAttempts: scenarioStats.wrongAttempts,
       hintsUsed: scenarioStats.hintsUsed,
       timeSpent
     });
+
     const previousUnlocked = getUnlockedAchievements(progress);
     const newUnlocked = getUnlockedAchievements(updatedProgress);
     const justUnlocked = newUnlocked.filter(id => !previousUnlocked.includes(id));
+    
     justUnlocked.forEach(id => {
       updatedProgress = unlockAchievement(updatedProgress, id);
     });
+
     setProgress(updatedProgress);
     saveProgress(updatedProgress);
+
     const newAchievementObjects = justUnlocked
       .map(id => achievements.find(a => a.id === id))
       .filter(Boolean);
+    
     setNewAchievements(newAchievementObjects);
     setShowMissionDebrief(true);
+
     setScenarioStats(prev => ({
       ...prev,
       scoreEarned,
@@ -307,19 +351,23 @@ export default function SimulatorPage({
       timeSpent: `${Math.floor(timeSpent / 60)}m ${timeSpent % 60}s`
     }));
   };
+
   const resolveLootVariables = (commandString) => {
-    // ... (unchanged)
+    // ... (This function is unchanged)
     const lootRegex = /\[loot:([^\]]+)\]/gi;
     let resolvedCmd = commandString;
+
     const matches = commandString.match(lootRegex);
     if (!matches) {
       return commandString;
     }
+
     for (const match of matches) {
       const usernameToFind = match.replace(lootRegex, '$1').toLowerCase();
       const foundCred = credentialInventory.find(
         (c) => c.username.toLowerCase() === usernameToFind
       );
+
       if (foundCred) {
         resolvedCmd = resolvedCmd.replace(match, foundCred.secret);
       } else {
@@ -328,9 +376,9 @@ export default function SimulatorPage({
     }
     return resolvedCmd;
   };
+
   const handleCommandSubmit = (command) => {
     // ... (This function is unchanged, I'm omitting it for brevity)
-    // It correctly handles main shell, sub-shell, 'ls', and 'cat'
     const normalizedInput = command.trim().toLowerCase();
     if (subShell) {
       setAttackerHistory(prev => [
@@ -474,8 +522,9 @@ export default function SimulatorPage({
     setIsProcessing(true);
     processStepOutput(step);
   };
+  
   const handleShowHint = (stepIndex) => {
-    // ... (unchanged)
+    // ... (This function is unchanged)
     const step = currentScenario.steps[stepIndex];
     if (!step) return;
     const hintLevel = hintsShown[stepIndex] || 0;
@@ -494,8 +543,9 @@ export default function SimulatorPage({
       setHintsShown(prev => ({ ...prev, [stepIndex]: 2 }));
     }
   };
+
   const handleQuizComplete = (quizStats) => {
-    // ... (unchanged)
+    // ... (This function is unchanged)
     let updatedProgress = { ...progress };
     updatedProgress = addQuizScore(
       updatedProgress,
@@ -508,10 +558,35 @@ export default function SimulatorPage({
     saveProgress(updatedProgress);
     setShowQuiz(false);
   };
+  
   const handleCloseBriefing = () => {
     setShowMissionBriefing(false);
     safeSetItem(briefingStorageKey, true);
   };
+  
+  // --- 3. NEW: Helper to get compromised nodes for the sheet ---
+  const compromisedNodes = useMemo(() => {
+    const nodes = new Set();
+    nodes.add('attacker'); 
+    
+    // This map defines which scenarios compromise which nodes
+    const compromiseMap = {
+      'pass-the-hash': ['target', 'dc'], // 'target' is the ID for the Internal Server
+      'dcsync': ['dc'],
+      'golden-ticket': ['dc']
+      // Add more as needed
+    };
+
+    if (progress && progress.scenariosCompleted) {
+      progress.scenariosCompleted.forEach(scenarioId => {
+        if (compromiseMap[scenarioId]) {
+          compromiseMap[scenarioId].forEach(node => nodes.add(node));
+        }
+      });
+    }
+    return Array.from(nodes);
+  }, [progress]);
+  // ---------------------------------------------------------
 
   // --- RENDERING ---
   return (
@@ -536,10 +611,9 @@ export default function SimulatorPage({
           <div className="main-layout">
             <div className="main-content">
               
-              {/* --- NEW: Replaced the static grid div with ResizablePanelGroup --- */}
               <ResizablePanelGroup
                 direction="horizontal"
-                className="simulation-page-grid" // We'll keep this class for styling
+                className="simulation-page-grid"
               >
                 {/* Panel 1: Guide */}
                 <ResizablePanel defaultSize={30} minSize={20}>
@@ -556,10 +630,12 @@ export default function SimulatorPage({
                     highlightedArrow={highlightedArrow}
                     onShowBriefing={() => setShowMissionBriefing(true)}
                     progress={progress}
+                    
+                    // --- 4. NEW: Pass the click handler down ---
+                    onNodeClick={setInspectingNode}
                   />
                 </ResizablePanel>
 
-                {/* The Handle */}
                 <ResizableHandle withHandle />
 
                 {/* Panel 2: Terminal */}
@@ -580,14 +656,11 @@ export default function SimulatorPage({
                     subShell={subShell}
                   />
                 </ResizablePanel>
-
               </ResizablePanelGroup>
-              {/* --- END of replacement --- */}
-
             </div>
           </div>
 
-          {/* ... (All Modals remain the same) ... */}
+          {/* ... (Modals: Mission, Quiz, Achievements, Settings) ... */}
           <MissionModal
             isOpen={showMissionBriefing}
             onClose={handleCloseBriefing}
@@ -633,6 +706,15 @@ export default function SimulatorPage({
               onClose={() => setIsSettingsOpen(false)}
               currentTheme={customTheme}
               onUpdateTheme={handleUpdateTheme}
+          />
+          
+          {/* --- 5. NEW: Render the Sheet component --- */}
+          <MachineInfoSheet
+            nodeName={inspectingNode}
+            network={currentScenario.network}
+            compromisedNodes={compromisedNodes}
+            isOpen={!!inspectingNode}
+            onClose={() => setInspectingNode(null)}
           />
       </div>
     </div>

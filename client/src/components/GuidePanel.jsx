@@ -1,18 +1,16 @@
-import { useState, useEffect, useMemo } from 'react'; // ADDED useMemo
+import { useState, useEffect, useMemo } from 'react';
 import { BookOpen, Lightbulb, Terminal, ChevronDown, Network } from 'lucide-react';
 import { Streamdown } from 'streamdown';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import NetworkMap from './NetworkMap';
 
-// Define localStorage keys for persistence
+// ... (getInitialCollapseState and compromiseMap helpers remain the same) ...
 const GUIDE_COLLAPSE_KEY = 'guide_panel_open';
 const NETWORK_COLLAPSE_KEY = 'network_map_open';
 
-// Helper to get initial state from localStorage, defaulting to true (open)
 const getInitialCollapseState = (key) => {
     try {
         const stored = localStorage.getItem(key);
-        // If stored value is null or 'true', return true. Only 'false' should return false.
         if (stored === null) return true; 
         return JSON.parse(stored);
     } catch (e) {
@@ -20,14 +18,10 @@ const getInitialCollapseState = (key) => {
     }
 };
 
-// --- NEW: Define which scenarios compromise which nodes ---
-// We map the scenario ID to the generic node name in NetworkMap.jsx
-// 'target' = Internal Server
-// 'dc' = Domain Controller
 const compromiseMap = {
-  'pass-the-hash': ['target', 'dc'], // This scenario compromises both
-  'dcsync': ['dc'],                 // This one compromises the DC
-  'golden-ticket': ['dc']         // This one also compromises the DC
+  'pass-the-hash': ['target', 'dc'],
+  'dcsync': ['dc'],
+  'golden-ticket': ['dc']
 };
 // ----------------------------------------------------
 
@@ -38,17 +32,16 @@ export default function GuidePanel({
   onTutorialToggle,
   highlightedMachine,
   highlightedArrow,
-  progress // <-- 1. ACCEPT THE NEW PROP
+  progress,
+  onNodeClick // <-- 1. ACCEPT THE NEW PROP
 }) {
   const { guide } = scenario;
   const currentGuideStep = guide.steps[currentStep];
 
-  // State for Network Map collapse
+  // ... (state and handlers remain the same) ...
   const [isNetworkOpen, setIsNetworkOpen] = useState(() => getInitialCollapseState(NETWORK_COLLAPSE_KEY));
-  // State for Attack Guide collapse
   const [isGuideOpen, setIsGuideOpen] = useState(() => getInitialCollapseState(GUIDE_COLLAPSE_KEY));
   
-  // Handlers to update local state and localStorage
   const handleNetworkToggle = (open) => {
       setIsNetworkOpen(open);
       try {
@@ -63,13 +56,9 @@ export default function GuidePanel({
       } catch (e) { /* ignore */ }
   };
 
-  // --- 2. NEW: Calculate compromised nodes based on progress ---
   const compromisedNodes = useMemo(() => {
     const nodes = new Set();
-    // The 'attacker' node is always "compromised" by default
     nodes.add('attacker'); 
-    
-    // Check all completed scenarios
     if (progress && progress.scenariosCompleted) {
       progress.scenariosCompleted.forEach(scenarioId => {
         if (compromiseMap[scenarioId]) {
@@ -79,15 +68,14 @@ export default function GuidePanel({
     }
     return Array.from(nodes);
   }, [progress]);
-  // ---------------------------------------------------------
 
   return (
     <div className="panel guide-panel flex flex-col gap-4">
         
         {/* 1. Network Topology Panel (Collapsible) */}
         <Collapsible 
-            open={isNetworkOpen} // Control state via hook
-            onOpenChange={handleNetworkToggle} // Update state and localStorage
+            open={isNetworkOpen}
+            onOpenChange={handleNetworkToggle}
             className="border border-border-color rounded-lg overflow-hidden flex-shrink-0"
         >
             <div className="panel-header !bg-transparent !border-b !border-border-color">
@@ -105,7 +93,8 @@ export default function GuidePanel({
                         highlightedMachine={highlightedMachine}
                         highlightedArrow={highlightedArrow}
                         network={scenario.network}
-                        compromisedNodes={compromisedNodes} // <-- 3. PASS THE NEW PROP
+                        compromisedNodes={compromisedNodes}
+                        onNodeClick={onNodeClick} // <-- 2. PASS THE PROP DOWN
                     />
                 </div>
             </CollapsibleContent>
@@ -115,15 +104,14 @@ export default function GuidePanel({
         {/* ... (rest of the file is unchanged) ... */}
         <div className="flex-1 border border-border-color rounded-lg overflow-hidden flex flex-col min-h-0">
             <Collapsible 
-                open={isGuideOpen} // Control state via hook
-                onOpenChange={handleGuideToggle} // Update state and localStorage
+                open={isGuideOpen}
+                onOpenChange={handleGuideToggle}
                 className="flex-1 flex flex-col min-h-0"
             >
                 <div className="panel-header !bg-transparent !border-b !border-border-color relative">
                     <BookOpen size={20} />
                     <h2 className="!text-sm !font-medium flex-1">Attack Guide</h2>
                     
-                    {/* Tutorial Toggle */}
                     {onTutorialToggle && (
                         <button 
                             className={`tutorial-toggle absolute right-10 ${tutorialMode ? 'active' : ''}`}
@@ -146,7 +134,6 @@ export default function GuidePanel({
                 
                 <CollapsibleContent className="flex-1 overflow-y-auto">
                     <div className="panel-content !p-4">
-                        {/* Overview Section */}
                         <section className="guide-section">
                             <h3 className="guide-section-title">Overview</h3>
                             <div className="guide-text">
@@ -154,7 +141,6 @@ export default function GuidePanel({
                             </div>
                         </section>
 
-                        {/* Current Step Section */}
                         {currentGuideStep && (
                             <section className="guide-section current-step">
                                 <h3 className="guide-section-title">
@@ -191,7 +177,6 @@ export default function GuidePanel({
                             </section>
                         )}
 
-                        {/* All Steps Overview */}
                         <section className="guide-section">
                             <h3 className="guide-section-title">All Steps</h3>
                             <ol className="steps-list">
