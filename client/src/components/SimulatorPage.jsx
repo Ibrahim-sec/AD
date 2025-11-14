@@ -3,8 +3,7 @@ import { Redirect, Link } from 'wouter';
 import Header from './Header';
 import GuidePanel from './GuidePanel';
 import AttackerPanel from './AttackerPanel';
-import NetworkMap from './NetworkMap';
-// import PlayerHUD from './PlayerHUD'; // REMOVED: No longer needed
+// REMOVED: import NetworkMap from './NetworkMap';
 import MissionModal from './MissionModal';
 import QuizPanel from './QuizPanel';
 import AchievementsPanel from './AchievementsPanel';
@@ -271,12 +270,7 @@ export default function SimulatorPage({
         rank={progress.rank}
       />
       
-      {/* REMOVED: PlayerHUD component is now merged into Header */}
-      
-      <NetworkMap 
-        highlightedMachine={highlightedMachine}
-        highlightedArrow={highlightedArrow}
-      />
+      {/* REMOVED: NetworkMap component call from here */}
       
       <div className="main-layout">
         <div className="main-content">
@@ -291,6 +285,8 @@ export default function SimulatorPage({
                 setTutorialMode(newTutorialMode);
                 setProgress(prev => ({ ...prev, tutorialMode: newTutorialMode }));
               }}
+              highlightedMachine={highlightedMachine}
+              highlightedArrow={highlightedArrow}
             />
             
             {/* COLUMN 2: Unified Terminal & Logs Panel (Flexible portion) */}

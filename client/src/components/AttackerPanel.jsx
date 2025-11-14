@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Terminal, Server, Shield } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
@@ -8,30 +8,47 @@ export default function AttackerPanel({
   onCommandSubmit, 
   isProcessing, 
   network,
-  activeMachine, // This props now represents the currently selected console (attacker, internal, dc)
+  activeMachine,
   onMachineChange,
   serverHistory,
   onShowHint,
   hintsAvailable = false
 }) {
   const [currentCommand, setCurrentCommand] = useState('');
+  const [commandHistory, setCommandHistory] = useState([]); // NEW STATE: Stores successful commands
+  const [historyIndex, setHistoryIndex] = useState(0); // NEW STATE: Tracks position in history (0 to commandHistory.length)
   
   // Create separate refs for each scrollable area and its end-point
   const terminalScrollRef = useRef(null);
   const terminalEndRef = useRef(null);
   const logsScrollRef = useRef(null);
   const logsEndRef = useRef(null);
-
   const inputRef = useRef(null);
 
-  // Determine the primary view to display in the main panel
   const currentTab = activeMachine === 'attacker' ? 'attacker-console' : 'logs-view';
   
   // Internal state for selected machine when on the 'logs-view' tab
-  // Default to 'internal' when switching to logs, unless it's already 'dc'
   const [logMachine, setLogMachine] = useState(activeMachine === 'dc' ? 'dc' : 'internal');
 
-  // FIX: Smart scroll for Attacker Terminal
+  // Logic to add command to history and reset index
+  const updateCommandHistory = useCallback((command) => {
+    const trimmedCommand = command.trim();
+    if (trimmedCommand) {
+        setCommandHistory(prev => {
+            if (prev.length > 0 && prev[prev.length - 1] === trimmedCommand) {
+                return prev;
+            }
+            // Only store commands typed in the terminal
+            return [...prev, trimmedCommand];
+        });
+        // When a new command is added, reset the index to the end (new input line position)
+        setHistoryIndex(prev => prev + 1);
+    }
+  }, []);
+
+  // --- SCROLL LOGIC ---
+  
+  // Smart scroll for Attacker Terminal
   useEffect(() => {
     const element = terminalScrollRef.current;
     if (element) {
@@ -41,21 +58,20 @@ export default function AttackerPanel({
         terminalEndRef.current?.scrollIntoView({ behavior: 'smooth' });
       }
     }
-  }, [history, isProcessing]); // Only depends on attacker history
+  }, [history, isProcessing]);
 
-  // FIX: Smart scroll for Server Logs
+  // Smart scroll for Server Logs
   useEffect(() => {
     const element = logsScrollRef.current;
     if (element) {
       const isScrolledToBottom = 
         element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
-      // Logs only auto-scroll if user is already at the bottom
       if (isScrolledToBottom) {
         logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
       }
     }
-  }, [serverHistory]); // Only depends on server history
-
+  }, [serverHistory]);
+  
   // Focus input on mount/tab change
   useEffect(() => {
     if (currentTab === 'attacker-console') {
@@ -63,9 +79,13 @@ export default function AttackerPanel({
     }
   }, [currentTab]);
 
+  // --- COMMAND INPUT LOGIC ---
+
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!currentCommand.trim() || isProcessing) return;
+    
+    updateCommandHistory(currentCommand); // Update history here
     onCommandSubmit(currentCommand);
     setCurrentCommand('');
   };
@@ -74,11 +94,56 @@ export default function AttackerPanel({
     inputRef.current?.focus();
   };
   
+  // NEW: Handle Arrow Key navigation for Command History
+  const handleKeyDown = (e) => {
+    // Intercept Tab key for machine switching (keeps old functionality)
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      const machines = ['attacker', 'internal', 'dc'];
+      const currentIndex = machines.indexOf(activeMachine);
+      const nextIndex = (currentIndex + 1) % machines.length;
+      onMachineChange(machines[nextIndex]);
+      return;
+    }
+
+    // Command History Navigation (only for attacker machine)
+    if (activeMachine !== 'attacker' || isProcessing) return;
+    
+    let newIndex = historyIndex;
+    let command = '';
+
+    if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        newIndex = Math.max(0, historyIndex - 1);
+        command = commandHistory[newIndex] || '';
+    } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        newIndex = Math.min(commandHistory.length, historyIndex + 1);
+        
+        if (newIndex === commandHistory.length) {
+            // If moving past the last entry, clear command (new input line)
+            command = '';
+        } else {
+            command = commandHistory[newIndex];
+        }
+    } else {
+        // If user starts typing a new command, reset the index to the end
+        if (historyIndex < commandHistory.length) {
+            setHistoryIndex(commandHistory.length);
+        }
+        return;
+    }
+
+    setHistoryIndex(newIndex);
+    setCurrentCommand(command);
+  };
+  
   // When user clicks the main "Logs" tab, update the active machine
   const handleTabChange = (value) => {
       if (value === 'attacker-console') {
           onMachineChange('attacker');
       } else {
+          // If switching to logs tab, keep the last viewed log machine active
           onMachineChange(logMachine);
       }
   };
@@ -89,6 +154,8 @@ export default function AttackerPanel({
     onMachineChange(machine);
   };
 
+  // --- DATA MAPPING ---
+
   const getMachineInfo = (machine) => {
     switch (machine) {
       case 'internal':
@@ -96,14 +163,14 @@ export default function AttackerPanel({
           hostname: network.target.hostname,
           ip: network.target.ip,
           role: 'Internal Server',
-          logs: serverHistory // Assuming serverHistory contains all non-attacker logs
+          logs: serverHistory
         };
       case 'dc':
         return {
           hostname: 'DC01.contoso.local',
           ip: '10.0.1.10',
           role: 'Domain Controller',
-          logs: serverHistory // Both internal and DC logs share serverHistory
+          logs: serverHistory
         };
       default:
         return {
@@ -124,7 +191,7 @@ export default function AttackerPanel({
           <span className="server-text">{entry.text}</span>
         </div>
       ))}
-      <div ref={logsEndRef} /> {/* Attach end ref for log scrolling */}
+      <div ref={logsEndRef} />
     </div>
   );
 
@@ -132,7 +199,7 @@ export default function AttackerPanel({
     const attackerInfo = getMachineInfo('attacker');
     
     return (
-      <div className="terminal-output" ref={terminalScrollRef}> {/* Attach scroll ref */}
+      <div className="terminal-output" ref={terminalScrollRef}>
         {attackerInfo.logs.map((entry, index) => (
           <div key={index} className={`terminal-line ${entry.type}`}>
             {entry.type === 'command' && <span className="prompt-symbol">$</span>}
@@ -149,6 +216,7 @@ export default function AttackerPanel({
               type="text"
               value={currentCommand}
               onChange={(e) => setCurrentCommand(e.target.value)}
+              onKeyDown={handleKeyDown} // ATTACHED ARROW KEY HANDLER
               className="terminal-input"
               disabled={isProcessing}
               autoComplete="off"
@@ -163,7 +231,7 @@ export default function AttackerPanel({
             <span className="processing-indicator">Processing...</span>
           </div>
         )}
-        <div ref={terminalEndRef} /> {/* Attach end ref for terminal scrolling */}
+        <div ref={terminalEndRef} />
       </div>
     );
   };
@@ -208,7 +276,6 @@ export default function AttackerPanel({
         <div 
           className="panel-content terminal-content" 
           onClick={handleTerminalClick}
-          // This ref is no longer needed as scrolling is on the children
         >
           {/* TAB CONTENT: Attacker Terminal */}
           <TabsContent value="attacker-console" className="p-0 h-full">
@@ -241,7 +308,7 @@ export default function AttackerPanel({
             {/* Log Output */}
             <div 
               className="server-content flex-1 overflow-y-auto" 
-              ref={logsScrollRef} /* Attach scroll ref for logs */
+              ref={logsScrollRef}
             >
                 {renderLogOutput(currentLogInfo.logs)}
             </div>
