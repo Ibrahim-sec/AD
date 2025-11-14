@@ -91,261 +91,383 @@ export default function HomePage({ scenarios, progress, appMode, setAppMode }) {
   }, [filteredScenarios]);
 
   return (
-    <div className="min-h-screen bg-[#0a0b0d] text-white overflow-x-hidden">
-      {/* Hero Section - Fixed at top */}
-      <div className="sticky top-0 z-10 bg-gradient-to-br from-[#0a0b0d] via-[#0f1419] to-[#0a0b0d] border-b border-white/5">
-        <div className="absolute inset-0 opacity-20">
-          <div className="absolute inset-0" style={{
-            backgroundImage: `
-              linear-gradient(rgba(45, 156, 219, 0.05) 1px, transparent 1px),
-              linear-gradient(90deg, rgba(45, 156, 219, 0.05) 1px, transparent 1px)
-            `,
-            backgroundSize: '50px 50px'
-          }} />
-        </div>
+    <div style={{ width: '100%', minHeight: '100vh', overflowY: 'auto' }} className="bg-[#0a0b0d] text-white">
+      {/* Header Section */}
+      <div className="bg-gradient-to-br from-[#0a0b0d] via-[#0f1419] to-[#0a0b0d] border-b border-white/5">
+        <div style={{ 
+          backgroundImage: `
+            linear-gradient(rgba(45, 156, 219, 0.05) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(45, 156, 219, 0.05) 1px, transparent 1px)
+          `,
+          backgroundSize: '50px 50px',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: '400px',
+          opacity: 0.2,
+          pointerEvents: 'none'
+        }} />
 
-        <div className="relative max-w-7xl mx-auto px-6 py-6">
+        <div style={{ position: 'relative', maxWidth: '1280px', margin: '0 auto', padding: '24px' }}>
           {/* Header */}
-          <div className="flex items-center justify-between mb-6">
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="flex items-center gap-3"
-            >
-              <div className="w-12 h-12 bg-gradient-to-br from-[#2D9CDB] to-[#1e6a8f] rounded-xl flex items-center justify-center shadow-lg shadow-[#2D9CDB]/30">
-                <Shield className="w-6 h-6 text-white" />
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{
+                width: '48px',
+                height: '48px',
+                background: 'linear-gradient(to bottom right, #2D9CDB, #1e6a8f)',
+                borderRadius: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 10px 25px rgba(45, 156, 219, 0.3)'
+              }}>
+                <Shield style={{ width: '24px', height: '24px', color: 'white' }} />
               </div>
               <div>
-                <h1 className="text-2xl font-bold">AD Attack Simulator</h1>
-                <p className="text-white/60 text-xs">Master Active Directory Exploitation</p>
+                <h1 style={{ fontSize: '24px', fontWeight: 'bold', margin: 0 }}>AD Attack Simulator</h1>
+                <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)', margin: 0 }}>Master Active Directory Exploitation</p>
               </div>
-            </motion.div>
+            </div>
 
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="flex gap-3"
-            >
+            <div style={{ display: 'flex', gap: '12px' }}>
               <button
                 onClick={() => setAppMode('simulator')}
-                className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all ${
-                  appMode === 'simulator'
-                    ? 'bg-[#2D9CDB] text-white shadow-lg shadow-[#2D9CDB]/30'
-                    : 'bg-white/5 text-white/60 hover:bg-white/10'
-                }`}
+                style={{
+                  padding: '8px 20px',
+                  borderRadius: '8px',
+                  fontWeight: '600',
+                  fontSize: '14px',
+                  border: 'none',
+                  cursor: 'pointer',
+                  background: appMode === 'simulator' ? '#2D9CDB' : 'rgba(255,255,255,0.05)',
+                  color: appMode === 'simulator' ? 'white' : 'rgba(255,255,255,0.6)',
+                  boxShadow: appMode === 'simulator' ? '0 10px 25px rgba(45, 156, 219, 0.3)' : 'none'
+                }}
               >
                 Play Scenarios
               </button>
               <Link href="/editor">
-                <button className="px-5 py-2 rounded-lg text-sm font-semibold bg-white/5 text-white/60 hover:bg-white/10 border border-white/10 transition-all">
+                <button style={{
+                  padding: '8px 20px',
+                  borderRadius: '8px',
+                  fontWeight: '600',
+                  fontSize: '14px',
+                  cursor: 'pointer',
+                  background: 'rgba(255,255,255,0.05)',
+                  color: 'rgba(255,255,255,0.6)',
+                  border: '1px solid rgba(255,255,255,0.1)'
+                }}>
                   Scenario Editor
                 </button>
               </Link>
-            </motion.div>
+            </div>
           </div>
 
-          {/* Stats - Compact */}
-          <div className="grid grid-cols-4 gap-3 mb-4">
-            <StatCard icon={<Trophy className="w-5 h-5" />} label="Total Score" value={stats.totalScore} color="from-yellow-500 to-orange-500" />
-            <StatCard icon={<Award className="w-5 h-5" />} label="Current Rank" value={stats.rank} color="from-purple-500 to-pink-500" />
-            <StatCard icon={<Target className="w-5 h-5" />} label="Scenarios Completed" value={`${stats.completed}/${stats.total}`} color="from-cyan-500 to-blue-500" />
-            <StatCard icon={<Star className="w-5 h-5" />} label="Achievements" value={stats.achievements} color="from-green-500 to-emerald-500" />
+          {/* Stats */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '16px' }}>
+            <StatCard icon={<Trophy />} label="Total Score" value={stats.totalScore} />
+            <StatCard icon={<Award />} label="Current Rank" value={stats.rank} />
+            <StatCard icon={<Target />} label="Scenarios Completed" value={`${stats.completed}/${stats.total}`} />
+            <StatCard icon={<Star />} label="Achievements" value={stats.achievements} />
           </div>
 
-          {/* Progress Bar - Compact */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-white/5 backdrop-blur-sm rounded-lg p-4 border border-white/10"
-          >
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <TrendingUp className="w-4 h-4 text-[#2D9CDB]" />
-                <span className="text-xs font-semibold">Overall Progress</span>
+          {/* Progress */}
+          <div style={{
+            background: 'rgba(255,255,255,0.05)',
+            backdropFilter: 'blur(10px)',
+            borderRadius: '12px',
+            padding: '16px',
+            border: '1px solid rgba(255,255,255,0.1)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <TrendingUp style={{ width: '16px', height: '16px', color: '#2D9CDB' }} />
+                <span style={{ fontSize: '12px', fontWeight: '600' }}>Overall Progress</span>
               </div>
-              <span className="text-xl font-bold text-[#2D9CDB]">{stats.completionRate}%</span>
+              <span style={{ fontSize: '20px', fontWeight: 'bold', color: '#2D9CDB' }}>{stats.completionRate}%</span>
             </div>
-            <div className="h-2 bg-white/5 rounded-full overflow-hidden">
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{ width: `${stats.completionRate}%` }}
-                transition={{ duration: 1 }}
-                className="h-full bg-gradient-to-r from-[#2D9CDB] to-cyan-400"
-              />
+            <div style={{ height: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '999px', overflow: 'hidden' }}>
+              <div style={{
+                height: '100%',
+                width: `${stats.completionRate}%`,
+                background: 'linear-gradient(to right, #2D9CDB, #22d3ee)',
+                transition: 'width 1s'
+              }} />
             </div>
-            <p className="text-[10px] text-white/40 mt-1.5">
+            <p style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', margin: '4px 0 0 0' }}>
               {stats.total - stats.completed} scenarios remaining to become a Cyber Ninja!
             </p>
-          </motion.div>
+          </div>
         </div>
       </div>
 
-      {/* Main Content - Scrollable */}
-      <div className="max-w-7xl mx-auto px-6 py-6 pb-20">
+      {/* Main Content */}
+      <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '24px' }}>
         {/* Search & Filters */}
-        <div className="mb-6">
-          <div className="flex gap-3 mb-3">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+        <div style={{ marginBottom: '24px' }}>
+          <div style={{ display: 'flex', gap: '12px', marginBottom: '12px' }}>
+            <div style={{ flex: 1, position: 'relative' }}>
+              <Search style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', width: '16px', height: '16px', color: 'rgba(255,255,255,0.4)' }} />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search scenarios..."
-                className="w-full pl-10 pr-4 py-2.5 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder:text-white/40 focus:border-[#2D9CDB] focus:outline-none"
+                style={{
+                  width: '100%',
+                  padding: '10px 12px 10px 36px',
+                  background: 'rgba(255,255,255,0.05)',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: '8px',
+                  color: 'white',
+                  fontSize: '14px',
+                  outline: 'none'
+                }}
               />
             </div>
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className={`px-5 py-2.5 rounded-lg text-sm font-medium flex items-center gap-2 ${
-                showFilters ? 'bg-[#2D9CDB] text-white' : 'bg-white/5 text-white/60 hover:bg-white/10 border border-white/10'
-              }`}
+              style={{
+                padding: '10px 20px',
+                borderRadius: '8px',
+                fontSize: '14px',
+                fontWeight: '500',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                cursor: 'pointer',
+                background: showFilters ? '#2D9CDB' : 'rgba(255,255,255,0.05)',
+                color: showFilters ? 'white' : 'rgba(255,255,255,0.6)',
+                border: showFilters ? 'none' : '1px solid rgba(255,255,255,0.1)'
+              }}
             >
-              <Filter className="w-4 h-4" />
+              <Filter style={{ width: '16px', height: '16px' }} />
               Filters
             </button>
           </div>
 
-          <AnimatePresence>
-            {showFilters && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                className="bg-white/5 rounded-lg p-3 border border-white/10 overflow-hidden"
-              >
-                <div className="flex flex-wrap gap-2">
-                  {['all', 'Beginner', 'Intermediate', 'Advanced', 'Expert'].map(diff => (
-                    <button
-                      key={diff}
-                      onClick={() => setSelectedDifficulty(diff)}
-                      className={`px-3 py-1.5 rounded text-xs font-medium transition-all ${
-                        selectedDifficulty === diff
-                          ? 'bg-[#2D9CDB] text-white'
-                          : 'bg-white/5 text-white/60 hover:bg-white/10'
-                      }`}
-                    >
-                      {diff === 'all' ? 'All' : diff}
-                    </button>
-                  ))}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          {showFilters && (
+            <div style={{
+              background: 'rgba(255,255,255,0.05)',
+              borderRadius: '8px',
+              padding: '12px',
+              border: '1px solid rgba(255,255,255,0.1)',
+              display: 'flex',
+              gap: '8px',
+              flexWrap: 'wrap'
+            }}>
+              {['all', 'Beginner', 'Intermediate', 'Advanced', 'Expert'].map(diff => (
+                <button
+                  key={diff}
+                  onClick={() => setSelectedDifficulty(diff)}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '6px',
+                    fontSize: '12px',
+                    fontWeight: '500',
+                    cursor: 'pointer',
+                    background: selectedDifficulty === diff ? '#2D9CDB' : 'rgba(255,255,255,0.05)',
+                    color: selectedDifficulty === diff ? 'white' : 'rgba(255,255,255,0.6)',
+                    border: 'none'
+                  }}
+                >
+                  {diff === 'all' ? 'All' : diff}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Header */}
-        <div className="mb-4 flex items-center gap-2">
-          <Target className="w-5 h-5 text-[#2D9CDB]" />
-          <h2 className="text-xl font-bold">Select Your Attack Scenario</h2>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+          <Target style={{ width: '20px', height: '20px', color: '#2D9CDB' }} />
+          <h2 style={{ fontSize: '20px', fontWeight: 'bold', margin: 0 }}>Select Your Attack Scenario</h2>
         </div>
-        <div className="text-xs text-[#2D9CDB] mb-6 font-medium">Campaign Attack Path</div>
+        <div style={{ fontSize: '12px', color: '#2D9CDB', fontWeight: '500', marginBottom: '24px' }}>Campaign Attack Path</div>
 
-        {/* Scenarios - Scrollable Content */}
-        <div className="space-y-6">
-          {Object.entries(scenariosByPhase).map(([phase, phaseScenarios]) => {
-            if (phaseScenarios.length === 0) return null;
-            return (
-              <div key={phase}>
-                <h3 className="text-base font-bold text-purple-400 mb-3">{phase}</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-                  {phaseScenarios.map((scenario) => (
-                    <ScenarioCard
-                      key={scenario.id}
-                      scenario={scenario}
-                      isCompleted={progress?.scenariosCompleted?.includes(scenario.id)}
-                    />
-                  ))}
-                </div>
+        {/* Scenarios */}
+        {Object.entries(scenariosByPhase).map(([phase, phaseScenarios]) => {
+          if (phaseScenarios.length === 0) return null;
+          return (
+            <div key={phase} style={{ marginBottom: '32px' }}>
+              <h3 style={{ fontSize: '16px', fontWeight: 'bold', color: '#a78bfa', marginBottom: '12px' }}>{phase}</h3>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+                gap: '12px'
+              }}>
+                {phaseScenarios.map((scenario) => (
+                  <ScenarioCard
+                    key={scenario.id}
+                    scenario={scenario}
+                    isCompleted={progress?.scenariosCompleted?.includes(scenario.id)}
+                  />
+                ))}
               </div>
-            );
-          })}
-        </div>
+            </div>
+          );
+        })}
 
         {/* No Results */}
         {filteredScenarios.length === 0 && (
-          <div className="text-center py-12">
-            <Search className="w-12 h-12 text-white/20 mx-auto mb-3" />
-            <p className="text-white/40 text-sm mb-3">No scenarios found</p>
+          <div style={{ textAlign: 'center', padding: '48px 0' }}>
+            <Search style={{ width: '48px', height: '48px', color: 'rgba(255,255,255,0.2)', margin: '0 auto 12px' }} />
+            <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '14px', marginBottom: '12px' }}>No scenarios found</p>
             <button
               onClick={() => {
                 setSearchQuery('');
                 setSelectedDifficulty('all');
               }}
-              className="px-4 py-2 bg-white/5 hover:bg-white/10 rounded-lg text-xs"
+              style={{
+                padding: '8px 16px',
+                background: 'rgba(255,255,255,0.05)',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '12px',
+                color: 'white',
+                cursor: 'pointer'
+              }}
             >
               Clear Filters
             </button>
           </div>
         )}
+
+        {/* Extra bottom padding */}
+        <div style={{ height: '80px' }} />
       </div>
     </div>
   );
 }
 
-// ============================================================================
-// HELPER COMPONENTS
-// ============================================================================
-
-function StatCard({ icon, label, value, color }) {
+function StatCard({ icon, label, value }) {
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      whileHover={{ scale: 1.02 }}
-      className="bg-white/5 backdrop-blur-sm rounded-lg p-3 border border-white/10 group cursor-pointer"
-    >
-      <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${color} opacity-20 flex items-center justify-center mb-2`}>
+    <div style={{
+      background: 'rgba(255,255,255,0.05)',
+      backdropFilter: 'blur(10px)',
+      borderRadius: '12px',
+      padding: '16px',
+      border: '1px solid rgba(255,255,255,0.1)'
+    }}>
+      <div style={{ marginBottom: '8px' }}>
         {icon}
       </div>
-      <div className="text-[10px] text-white/60 mb-0.5">{label}</div>
-      <div className="text-lg font-bold text-white">{value}</div>
-    </motion.div>
+      <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.6)', marginBottom: '4px' }}>{label}</div>
+      <div style={{ fontSize: '20px', fontWeight: 'bold' }}>{value}</div>
+    </div>
   );
 }
 
 function ScenarioCard({ scenario, isCompleted }) {
   const getDifficultyColor = (difficulty) => {
     switch (difficulty) {
-      case 'Beginner': return 'bg-green-500/20 text-green-400 border-green-500/30';
-      case 'Intermediate': return 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
-      case 'Advanced': return 'bg-red-500/20 text-red-400 border-red-500/30';
-      case 'Expert': return 'bg-purple-500/20 text-purple-400 border-purple-500/30';
-      default: return 'bg-gray-500/20 text-gray-400 border-gray-500/30';
+      case 'Beginner': return { bg: 'rgba(34, 197, 94, 0.2)', text: '#22c55e', border: 'rgba(34, 197, 94, 0.3)' };
+      case 'Intermediate': return { bg: 'rgba(234, 179, 8, 0.2)', text: '#eab308', border: 'rgba(234, 179, 8, 0.3)' };
+      case 'Advanced': return { bg: 'rgba(239, 68, 68, 0.2)', text: '#ef4444', border: 'rgba(239, 68, 68, 0.3)' };
+      case 'Expert': return { bg: 'rgba(168, 85, 247, 0.2)', text: '#a855f7', border: 'rgba(168, 85, 247, 0.3)' };
+      default: return { bg: 'rgba(156, 163, 175, 0.2)', text: '#9ca3af', border: 'rgba(156, 163, 175, 0.3)' };
     }
   };
 
+  const colors = getDifficultyColor(scenario.difficulty);
+
   return (
-    <motion.div whileHover={{ scale: 1.02, y: -2 }}>
-      <Link href={`/scenario/${scenario.id}`}>
-        <a className="block group">
-          <div className="relative bg-[#1a1d24] hover:bg-[#1f2229] rounded-lg p-4 border border-white/10 hover:border-[#2D9CDB]/50 transition-all h-full">
-            {isCompleted && (
-              <div className="absolute top-2 right-2 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
-                <CheckCircle className="w-4 h-4 text-white" />
-              </div>
-            )}
-            <div className="flex items-start gap-2 mb-2">
-              <div className="w-8 h-8 rounded-lg bg-[#2D9CDB]/20 flex items-center justify-center flex-shrink-0">
-                <Target className="w-4 h-4 text-[#2D9CDB]" />
-              </div>
-              <h3 className="text-sm font-bold line-clamp-2 group-hover:text-[#2D9CDB] transition-colors leading-tight">
-                {scenario.title}
-              </h3>
+    <Link href={`/scenario/${scenario.id}`}>
+      <a style={{ textDecoration: 'none', display: 'block' }}>
+        <div style={{
+          position: 'relative',
+          background: '#1a1d24',
+          borderRadius: '12px',
+          padding: '16px',
+          border: '1px solid rgba(255,255,255,0.1)',
+          cursor: 'pointer',
+          transition: 'all 0.2s',
+          height: '100%'
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.background = '#1f2229';
+          e.currentTarget.style.borderColor = 'rgba(45, 156, 219, 0.5)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.background = '#1a1d24';
+          e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)';
+        }}>
+          {isCompleted && (
+            <div style={{
+              position: 'absolute',
+              top: '12px',
+              right: '12px',
+              width: '24px',
+              height: '24px',
+              background: '#22c55e',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <CheckCircle style={{ width: '16px', height: '16px', color: 'white' }} />
             </div>
-            <p className="text-[11px] text-white/60 mb-3 line-clamp-2 leading-relaxed">{scenario.description}</p>
-            <div className="flex items-center justify-between">
-              <span className={`px-2 py-0.5 rounded text-[10px] font-semibold border ${getDifficultyColor(scenario.difficulty)}`}>
-                {scenario.difficulty}
-              </span>
-              <div className="flex items-center gap-1 text-[10px] text-white/40">
-                <Clock className="w-3 h-3" />
-                <span>Steps: {scenario.steps?.length || 0}</span>
-              </div>
+          )}
+          <div style={{ display: 'flex', alignItems: 'start', gap: '8px', marginBottom: '8px' }}>
+            <div style={{
+              width: '32px',
+              height: '32px',
+              borderRadius: '8px',
+              background: 'rgba(45, 156, 219, 0.2)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0
+            }}>
+              <Target style={{ width: '16px', height: '16px', color: '#2D9CDB' }} />
+            </div>
+            <h3 style={{
+              fontSize: '14px',
+              fontWeight: 'bold',
+              color: 'white',
+              margin: 0,
+              lineHeight: '1.4',
+              display: '-webkit-box',
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden'
+            }}>
+              {scenario.title}
+            </h3>
+          </div>
+          <p style={{
+            fontSize: '11px',
+            color: 'rgba(255,255,255,0.6)',
+            lineHeight: '1.5',
+            marginBottom: '12px',
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden'
+          }}>
+            {scenario.description}
+          </p>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{
+              padding: '4px 8px',
+              borderRadius: '4px',
+              fontSize: '10px',
+              fontWeight: '600',
+              background: colors.bg,
+              color: colors.text,
+              border: `1px solid ${colors.border}`
+            }}>
+              {scenario.difficulty}
+            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px', color: 'rgba(255,255,255,0.4)' }}>
+              <Clock style={{ width: '12px', height: '12px' }} />
+              <span>Steps: {scenario.steps?.length || 0}</span>
             </div>
           </div>
-        </a>
-      </Link>
-    </motion.div>
+        </div>
+      </a>
+    </Link>
   );
 }
