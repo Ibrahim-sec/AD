@@ -4,4 +4,3 @@ import "./index.css";
 // We are importing styles from index.css now
 
 createRoot(document.getElementById("root")!).render(<App />);
-
