@@ -90,7 +90,9 @@ export default function SimulatorPage({
     setIsProcessing: state.setIsProcessing,
     setCurrentStep: state.setCurrentStep,
     setState: state.setState,
-    completeScenario
+    completeScenario,
+    scenarioStats: state.scenarioStats  // ADD THIS LINE
+
   });
   
   // Initialize command handling

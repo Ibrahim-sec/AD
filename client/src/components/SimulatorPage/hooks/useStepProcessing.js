@@ -17,7 +17,8 @@ export const useStepProcessing = ({
   setIsProcessing,
   setCurrentStep,
   setState,
-  completeScenario
+  completeScenario,
+  scenarioStats  // ADD THIS
 }) => {
   const processingRef = useRef(false);
   const mountedRef = useRef(true);
@@ -100,7 +101,7 @@ export const useStepProcessing = ({
         setIsProcessing(false);
         
         if (currentStep === currentScenario.steps.length - 1) {
-          completeScenario();
+          completeScenario(scenarioStats);  // PASS scenarioStats HERE
         } else {
           setCurrentStep(prev => prev + 1);
         }
@@ -125,7 +126,8 @@ export const useStepProcessing = ({
     setIsProcessing,
     setCurrentStep,
     setState,
-    completeScenario
+    completeScenario,
+    scenarioStats  // ADD TO DEPENDENCIES
   ]);
 
   const processSubCommandOutput = useCallback(async (subCommand) => {

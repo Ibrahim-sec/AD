@@ -20,21 +20,24 @@ export const useScenarioCompletion = ({
   const [newAchievements, setNewAchievements] = useState([]);
   const [showMissionDebrief, setShowMissionDebrief] = useState(false);
 
-  const completeScenario = useCallback(() => {
+  const completeScenario = useCallback((currentStats) => {
     if (isMissionCompleted) return;
+    
+    // Use passed stats or fallback to closure stats
+    const statsToUse = currentStats || scenarioStats;
     
     setIsMissionCompleted(true);
     
-    const timeSpent = Math.round((Date.now() - scenarioStats.startTime) / 1000);
+    const timeSpent = Math.round((Date.now() - statsToUse.startTime) / 1000);
     const scoreEarned = calculateScenarioScore(
-      scenarioStats.wrongAttempts, 
-      scenarioStats.hintsUsed
+      statsToUse.wrongAttempts, 
+      statsToUse.hintsUsed
     );
     
     let updatedProgress = { ...progress };
     updatedProgress = addScenarioCompletion(updatedProgress, scenarioId, {
-      wrongAttempts: scenarioStats.wrongAttempts,
-      hintsUsed: scenarioStats.hintsUsed,
+      wrongAttempts: statsToUse.wrongAttempts,
+      hintsUsed: statsToUse.hintsUsed,
       timeSpent
     });
     
@@ -59,7 +62,8 @@ export const useScenarioCompletion = ({
     return {
       scoreEarned,
       stepsCompleted: currentScenario.steps.length,
-      timeSpent: `${Math.floor(timeSpent / 60)}m ${timeSpent % 60}s`
+      timeSpent: `${Math.floor(timeSpent / 60)}m ${timeSpent % 60}s`,
+      wrongAttempts: statsToUse.wrongAttempts
     };
   }, [
     isMissionCompleted,
