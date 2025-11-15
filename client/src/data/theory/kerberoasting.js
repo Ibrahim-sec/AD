@@ -36,30 +36,29 @@ Kerberoasting is a post-exploitation attack method that targets service accounts
       `
     }
   ],
-  quiz: {
-    questions: [
-      {
-        question: "What encryption is used for service tickets in Kerberoasting?",
-        options: [
-          "The service account's password hash",
-          "The domain administrator's password",
-          "The user's password hash",
-          "A random session key"
-        ],
-        correctIndex: 0,
-        explanation: "Service tickets for SPNs are encrypted with the service account's password hash."
-      },
-      {
-        question: "Which is the BEST defense against Kerberoasting?",
-        options: [
-          "Disable Kerberos authentication",
-          "Enforce strong/random service account passwords",
-          "Set user accounts with SPNs",
-          "Use single sign-on for all users"
-        ],
-        correctIndex: 1,
-        explanation: "Strong, random passwords for service accounts make hash cracking impractical."
-      }
-    ]
-  }
+  // FIXED: quiz is now an array, not an object
+  quiz: [
+    {
+      question: "What encryption is used for service tickets in Kerberoasting?",
+      options: [
+        "The service account's password hash",
+        "The domain administrator's password",
+        "The user's password hash",
+        "A random session key"
+      ],
+      correct: 0, // was correctIndex
+      explanation: "Service tickets for SPNs are encrypted with the service account's password hash."
+    },
+    {
+      question: "Which is the BEST defense against Kerberoasting?",
+      options: [
+        "Disable Kerberos authentication",
+        "Enforce strong/random service account passwords",
+        "Set user accounts with SPNs",
+        "Use single sign-on for all users"
+      ],
+      correct: 1,
+      explanation: "Strong, random passwords for service accounts make hash cracking impractical."
+    }
+  ]
 };
