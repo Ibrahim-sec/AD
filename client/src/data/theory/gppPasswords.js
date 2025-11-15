@@ -1,3 +1,5 @@
+import { gppPasswordsDiagram } from '@/data/diagrams';
+
 export const gppPasswordsTheory = {
   id: 'gpp-passwords',
   title: 'Group Policy Preferences (GPP) Passwords',
@@ -5,6 +7,7 @@ export const gppPasswordsTheory = {
   estimatedTime: '8 minutes',
   difficulty: 'Intermediate',
   xpReward: 110,
+
   
   sections: [
     {

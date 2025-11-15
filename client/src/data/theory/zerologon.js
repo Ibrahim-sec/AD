@@ -1,3 +1,5 @@
+import { zerologonDiagram } from '@/data/diagrams';
+
 export const zerologonTheory = {
   id: 'zerologon',
   title: 'Zerologon Vulnerability',

@@ -1,3 +1,6 @@
+javascript
+import { skeletonKeyDiagram } from '@/data/diagrams';
+
 export const skeletonKeyTheory = {
   id: 'skeleton-key',
   title: 'Skeleton Key Attack',

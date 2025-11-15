@@ -1,3 +1,5 @@
+import { ntlmRelayDiagram } from '@/data/diagrams';
+
 export const ntlmRelayTheory = {
   id: 'ntlm-relay',
   title: 'NTLM Relay Attack',
@@ -6,6 +8,7 @@ export const ntlmRelayTheory = {
   difficulty: 'Advanced',
   xpReward: 140,
   
+  diagram: ntlmRelayDiagram,  // Add this line
   sections: [
     {
       id: 'intro',

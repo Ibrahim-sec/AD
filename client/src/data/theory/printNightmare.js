@@ -1,3 +1,5 @@
+import { printNightmareDiagram } from '@/data/diagrams';
+
 export const printNightmareTheory = {
   id: 'printnightmare',
   title: 'PrintNightmare Vulnerability',
@@ -5,6 +7,9 @@ export const printNightmareTheory = {
   estimatedTime: '12 minutes',
   difficulty: 'Advanced',
   xpReward: 180,
+
+  diagram: printNightmareDiagram,  // Add this line
+
 
   sections: [
     {
