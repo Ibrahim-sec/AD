@@ -18,7 +18,10 @@ export const useStepProcessing = ({
   setCurrentStep,
   setState,
   completeScenario,
-  scenarioStats  // ADD THIS
+  scenarioStats,
+  setSimulatedFiles,
+  setSimulatedFileSystem,
+  setCredentialInventory
 }) => {
   const processingRef = useRef(false);
   const mountedRef = useRef(true);
@@ -67,9 +70,13 @@ export const useStepProcessing = ({
         }
       }
       
-      // Grant loot
+      // Grant loot - FIXED: Pass state setters directly
       if (lootToGrant && mountedRef.current) {
-        processLootGrant(lootToGrant, null, setState);
+        processLootGrant(lootToGrant, {
+          setSimulatedFiles,
+          setSimulatedFileSystem,
+          setCredentialInventory
+        });
       }
       
       // Add defense alert
@@ -101,7 +108,7 @@ export const useStepProcessing = ({
         setIsProcessing(false);
         
         if (currentStep === currentScenario.steps.length - 1) {
-          completeScenario(scenarioStats);  // PASS scenarioStats HERE
+          completeScenario(scenarioStats);
         } else {
           setCurrentStep(prev => prev + 1);
         }
@@ -127,7 +134,10 @@ export const useStepProcessing = ({
     setCurrentStep,
     setState,
     completeScenario,
-    scenarioStats  // ADD TO DEPENDENCIES
+    scenarioStats,
+    setSimulatedFiles,
+    setSimulatedFileSystem,
+    setCredentialInventory
   ]);
 
   const processSubCommandOutput = useCallback(async (subCommand) => {
@@ -169,8 +179,13 @@ export const useStepProcessing = ({
         }
       }
       
+      // Grant loot - FIXED: Pass state setters directly
       if (lootToGrant && mountedRef.current) {
-        processLootGrant(lootToGrant, null, setState);
+        processLootGrant(lootToGrant, {
+          setSimulatedFiles,
+          setSimulatedFileSystem,
+          setCredentialInventory
+        });
       }
       
       if (mountedRef.current) {
@@ -189,7 +204,15 @@ export const useStepProcessing = ({
         setIsProcessing(false);
       }
     }
-  }, [setAttackerHistory, setServerHistory, setState, setIsProcessing]);
+  }, [
+    setAttackerHistory, 
+    setServerHistory, 
+    setState, 
+    setIsProcessing,
+    setSimulatedFiles,
+    setSimulatedFileSystem,
+    setCredentialInventory
+  ]);
 
   return {
     processStepOutput,

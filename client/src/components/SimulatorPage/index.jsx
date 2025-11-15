@@ -93,7 +93,10 @@ export default function SimulatorPage({
     setCurrentStep: state.setCurrentStep,
     setState: state.setState,
     completeScenario,
-    scenarioStats: state.scenarioStats
+    scenarioStats: state.scenarioStats,
+    setSimulatedFiles: state.setSimulatedFiles,
+    setSimulatedFileSystem: state.setSimulatedFileSystem,
+    setCredentialInventory: state.setCredentialInventory
   });
   
   // Initialize command handling
@@ -150,7 +153,7 @@ export default function SimulatorPage({
     state.setScenarioStats(initialState.scenarioStats);
     state.setHintsShown(initialState.hintsShown);
     processingRef.current = false;
-    resetCompletion(); // Reset completion state when scenario changes
+    resetCompletion();
   }, [scenarioId, resetCompletion]);
 
   // Sub-shell timeout

@@ -54,38 +54,30 @@ export const harvestCredential = (inventory, type, username, secret) => {
 
 /**
  * Process loot grant from step
+ * FIXED: Now uses state setters directly instead of the generic setState
  */
-export const processLootGrant = (lootToGrant, state, setState) => {
+export const processLootGrant = (lootToGrant, setters) => {
   if (!lootToGrant) return;
   
-  // Grant files
-  if (lootToGrant.files) {
-    setState(prev => ({
+  // Grant files to file system
+  if (lootToGrant.files && setters.setSimulatedFileSystem) {
+    setters.setSimulatedFileSystem(prev => ({
       ...prev,
-      simulatedFileSystem: { ...prev.simulatedFileSystem, ...lootToGrant.files }
+      ...lootToGrant.files
     }));
   }
   
   // Grant credentials
-  if (lootToGrant.creds) {
+  if (lootToGrant.creds && setters.setCredentialInventory) {
     lootToGrant.creds.forEach(cred => {
-      setState(prev => ({
-        ...prev,
-        credentialInventory: harvestCredential(
-          prev.credentialInventory,
-          cred.type,
-          cred.username,
-          cred.secret
-        )
-      }));
+      setters.setCredentialInventory(prev =>
+        harvestCredential(prev, cred.type, cred.username, cred.secret)
+      );
     });
   }
   
-  // Grant downloads
-  if (lootToGrant.download) {
-    setState(prev => ({
-      ...prev,
-      simulatedFiles: [...prev.simulatedFiles, ...lootToGrant.download]
-    }));
+  // Grant file downloads - THIS WAS THE BUG
+  if (lootToGrant.download && setters.setSimulatedFiles) {
+    setters.setSimulatedFiles(prev => [...prev, ...lootToGrant.download]);
   }
 };
