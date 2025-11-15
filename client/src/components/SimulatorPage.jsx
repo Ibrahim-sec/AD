@@ -942,8 +942,17 @@ export default function SimulatorPage({
                 onTutorialToggle={() => {
                   const newTutorialMode = !tutorialMode;
                   setTutorialMode(newTutorialMode);
-                  setProgress(prev => ({ ...prev, tutorialMode: newTutorialMode }));
+                  
+                  // Create complete progress object before updating
+                  const updatedProgress = {
+                    ...progress,
+                    tutorialMode: newTutorialMode,
+                    updatedAt: Date.now()
+                  };
+                  
+                  setProgress(updatedProgress);
                 }}
+
                 highlightedMachine={highlightedMachine}
                 highlightedArrow={highlightedArrow}
                 onShowBriefing={() => setShowMissionBriefing(true)}
