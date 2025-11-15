@@ -1,11 +1,20 @@
-import { useState } from 'react';
-import { CheckCircle2, XCircle, ChevronRight } from 'lucide-react';
+// client/src/components/QuizPanel.jsx
 
-export default function QuizPanel({ quiz, onComplete, onSkip }) {
+import { useState, useEffect } from 'react';
+import { CheckCircle2, XCircle, ChevronRight, Info } from 'lucide-react';
+
+export default function QuizPanel({ quiz, onComplete, onSkip, progress, scenarioId }) {
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState({});
   const [showExplanation, setShowExplanation] = useState(false);
   const [completed, setCompleted] = useState(false);
+
+  // Check quiz completion status from user progress
+  const alreadyCompleted = !!(progress && progress.quizScores && progress.quizScores[scenarioId]);
+
+  useEffect(() => {
+    if (alreadyCompleted) setCompleted(true);
+  }, [alreadyCompleted]);
 
   if (!quiz || !quiz.questions) {
     return (
@@ -43,14 +52,52 @@ export default function QuizPanel({ quiz, onComplete, onSkip }) {
       ([qIdx, aIdx]) => quiz.questions[parseInt(qIdx)].correctIndex === aIdx
     ).length;
     const score = Math.round((correctCount / quiz.questions.length) * 100);
-    
+
     setCompleted(true);
-    onComplete({
-      score,
-      correctAnswers: correctCount,
-      totalQuestions: quiz.questions.length
-    });
+    // Only award points if not already done
+    if (!alreadyCompleted && onComplete) {
+      onComplete({
+        score,
+        correctAnswers: correctCount,
+        totalQuestions: quiz.questions.length
+      });
+    }
   };
+
+  // If user already completed the quiz, show readonly result & message
+  if (completed && alreadyCompleted) {
+    const prevResult = progress.quizScores[scenarioId];
+    return (
+      <div className="quiz-completed">
+        <div className="quiz-result-header">
+          <CheckCircle2 size={48} className="result-icon success" />
+          <h2>Quiz Already Completed</h2>
+        </div>
+        <div className="quiz-result-stats">
+          <div className="result-stat">
+            <span className="result-label">Score</span>
+            <span className="result-value">{prevResult.percentage}%</span>
+          </div>
+          <div className="result-stat">
+            <span className="result-label">Correct</span>
+            <span className="result-value">
+              {prevResult.correctAnswers}/{prevResult.totalQuestions}
+            </span>
+          </div>
+          <div className="result-stat">
+            <span className="result-label">Points</span>
+            <span className="result-value">+{prevResult.score}</span>
+          </div>
+        </div>
+        <div className="quiz-info-message">
+          <Info className="inline" /> You already got points for this quiz. Replaying won't award additional points.
+        </div>
+        <button className="quiz-button" onClick={onSkip}>
+          Close Quiz
+        </button>
+      </div>
+    );
+  }
 
   if (completed) {
     const correctCount = Object.entries(selectedAnswers).filter(
