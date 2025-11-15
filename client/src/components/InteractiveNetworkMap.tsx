@@ -1,3 +1,5 @@
+// client/src/components/InteractiveNetworkMap.tsx
+
 import { useState, useEffect, useCallback } from 'react';
 import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -408,7 +410,6 @@ export default function InteractiveNetworkMap({
                 height="400" 
                 viewBox="0 0 800 400"
                 className="w-full h-full"
-                style={{ minHeight: '400px' }}
               >
                 <defs>
                   {/* Enhanced Glow Filter */}
@@ -751,15 +752,14 @@ export default function InteractiveNetworkMap({
                         </text>
                       )}
 
-                      {/* Hover Tooltip */}
+                      {/* Hover Tooltip - FIXED */}
                       {hoveredNode === node.id && (
                         <g>
                           <rect
                             x="130"
                             y="0"
                             width="200"
-                            height="auto"
-                            minHeight="100"
+                            height={86 + (node.services?.slice(0, 4).length || 0) * 14 + (node.isCompromised ? 28 : 14)}
                             rx="8"
                             fill="#1a1b1e"
                             stroke="#2D9CDB"
@@ -791,7 +791,13 @@ export default function InteractiveNetworkMap({
                             </text>
                           ))}
                           {node.isCompromised && (
-                            <text x="140" y={86 + (node.services?.length || 0) * 14 + 14} fill="#ef4444" fontSize="10" fontWeight="700">
+                            <text 
+                              x="140" 
+                              y={86 + (node.services?.slice(0, 4).length || 0) * 14 + 14} 
+                              fill="#ef4444" 
+                              fontSize="10" 
+                              fontWeight="700"
+                            >
                               ⚠️ COMPROMISED
                             </text>
                           )}
