@@ -1,4 +1,4 @@
-// client/src/components/MissionModal.jsx (Enhanced Version)
+// client/src/components/MissionModal.jsx (Fixed Version)
 
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -103,10 +103,10 @@ export default function MissionModal({
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            className="bg-[#101214] border border-white/10 rounded-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-hidden shadow-2xl"
+            className="bg-[#101214] border border-white/10 rounded-2xl max-w-2xl w-full mx-4 max-h-[90vh] flex flex-col overflow-hidden shadow-2xl"
           >
             {/* Header */}
-            <div className="bg-gradient-to-r from-[#2D9CDB] to-cyan-500 p-6 relative overflow-hidden">
+            <div className="bg-gradient-to-r from-[#2D9CDB] to-cyan-500 p-6 relative overflow-hidden flex-shrink-0">
               <div className="absolute inset-0 opacity-10" style={{
                 backgroundImage: `repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,0.1) 10px, rgba(255,255,255,0.1) 20px)`
               }} />
@@ -131,8 +131,8 @@ export default function MissionModal({
               </div>
             </div>
 
-            {/* Content */}
-            <div className="p-6 overflow-y-auto max-h-[calc(90vh-200px)]">
+            {/* Content - SCROLLABLE */}
+            <div className="p-6 overflow-y-auto flex-1 min-h-0">
               {/* Objective */}
               <div className="mb-6">
                 <h3 className="text-lg font-bold text-white mb-2 flex items-center gap-2">
@@ -180,7 +180,7 @@ export default function MissionModal({
             </div>
 
             {/* Footer */}
-            <div className="p-6 border-t border-white/10">
+            <div className="p-6 border-t border-white/10 flex-shrink-0">
               <button
                 onClick={onClose}
                 className="w-full px-6 py-3 bg-gradient-to-r from-[#2D9CDB] to-cyan-500 hover:from-[#2D9CDB]/90 hover:to-cyan-500/90 text-white font-semibold rounded-lg transition-all flex items-center justify-center gap-2 shadow-lg shadow-[#2D9CDB]/30"
@@ -195,10 +195,10 @@ export default function MissionModal({
     );
   }
 
-  // DEBRIEF (Mission Complete)
+  // DEBRIEF (Mission Complete) - FIXED WITH SCROLLING
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
         {showConfetti && (
           <Confetti
             width={window.innerWidth}
@@ -213,10 +213,10 @@ export default function MissionModal({
           initial={{ opacity: 0, scale: 0.9, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.9, y: 20 }}
-          className="bg-[#101214] border border-white/10 rounded-2xl max-w-3xl w-full mx-4 max-h-[90vh] overflow-hidden shadow-2xl"
+          className="bg-[#101214] border border-white/10 rounded-2xl max-w-3xl w-full max-h-[90vh] flex flex-col overflow-hidden shadow-2xl"
         >
-          {/* Header with Trophy */}
-          <div className="relative p-8 text-center overflow-hidden">
+          {/* Header with Trophy - FIXED HEIGHT */}
+          <div className="relative p-8 text-center overflow-hidden flex-shrink-0">
             {/* Animated background */}
             <div className="absolute inset-0 bg-gradient-to-br from-[#2D9CDB]/20 via-transparent to-purple-500/20" />
             <motion.div
@@ -286,8 +286,8 @@ export default function MissionModal({
             )}
           </div>
 
-          {/* Stats Grid */}
-          <div className="px-8 pb-6">
+          {/* Stats Grid and Content - SCROLLABLE AREA */}
+          <div className="px-8 pb-6 flex-1 min-h-0 overflow-y-auto">
             <div className="grid grid-cols-2 gap-4 mb-6">
               {/* Score */}
               <motion.div
@@ -372,13 +372,13 @@ export default function MissionModal({
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm text-white/60">Campaign Progress</span>
                 <span className="text-sm text-[#2D9CDB] font-semibold">
-                  {progress?.scenariosCompleted?.length || 0} / {progress?.totalScenarios || 19} scenarios
+                  {progress?.scenariosCompleted?.length || 0} / 19 scenarios
                 </span>
               </div>
               <div className="h-2 bg-white/5 rounded-full overflow-hidden">
                 <motion.div
                   initial={{ width: 0 }}
-                  animate={{ width: `${((progress?.scenariosCompleted?.length || 0) / (progress?.totalScenarios || 19)) * 100}%` }}
+                  animate={{ width: `${((progress?.scenariosCompleted?.length || 0) / 19) * 100}%` }}
                   transition={{ duration: 1, delay: 1.1 }}
                   className="h-full bg-gradient-to-r from-[#2D9CDB] to-cyan-400"
                 />
@@ -414,7 +414,7 @@ export default function MissionModal({
               </motion.div>
             )}
 
-            {/* Key Takeaways */}
+            {/* Key Takeaways - NOW VISIBLE AND SCROLLABLE */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -427,27 +427,27 @@ export default function MissionModal({
               </div>
               <ul className="space-y-2 text-sm text-white/70">
                 <li className="flex items-start gap-2">
-                  <span className="text-[#2D9CDB]">•</span>
+                  <span className="text-[#2D9CDB] flex-shrink-0">•</span>
                   <span>You successfully simulated a real-world AD attack</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="text-[#2D9CDB]">•</span>
+                  <span className="text-[#2D9CDB] flex-shrink-0">•</span>
                   <span>This technique is used in actual penetration tests</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="text-[#2D9CDB]">•</span>
+                  <span className="text-[#2D9CDB] flex-shrink-0">•</span>
                   <span>Understanding defense helps improve security posture</span>
                 </li>
                 <li className="flex items-start gap-2">
-                  <span className="text-[#2D9CDB]">•</span>
+                  <span className="text-[#2D9CDB] flex-shrink-0">•</span>
                   <span>{getMotivationalMessage(stats?.scoreEarned, stats?.wrongAttempts)}</span>
                 </li>
               </ul>
             </motion.div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="px-8 pb-8">
+          {/* Action Buttons - FIXED AT BOTTOM */}
+          <div className="px-8 pb-8 flex-shrink-0">
             <div className="grid grid-cols-2 gap-3">
               <button
                 onClick={onRetry}
