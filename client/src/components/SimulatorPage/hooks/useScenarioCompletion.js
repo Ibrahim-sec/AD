@@ -19,6 +19,7 @@ export const useScenarioCompletion = ({
   const [isMissionCompleted, setIsMissionCompleted] = useState(false);
   const [newAchievements, setNewAchievements] = useState([]);
   const [showMissionDebrief, setShowMissionDebrief] = useState(false);
+  const [completionStats, setCompletionStats] = useState(null); // ADD THIS
 
   const completeScenario = useCallback((currentStats) => {
     if (isMissionCompleted) return;
@@ -33,6 +34,18 @@ export const useScenarioCompletion = ({
       statsToUse.wrongAttempts, 
       statsToUse.hintsUsed
     );
+    
+    // BUILD COMPLETION STATS
+    const finalStats = {
+      scoreEarned,
+      stepsCompleted: currentScenario.steps.length,
+      timeSpent: `${Math.floor(timeSpent / 60)}m ${timeSpent % 60}s`,
+      wrongAttempts: statsToUse.wrongAttempts,
+      hintsUsed: statsToUse.hintsUsed
+    };
+    
+    // STORE STATS FOR MODAL
+    setCompletionStats(finalStats);
     
     let updatedProgress = { ...progress };
     updatedProgress = addScenarioCompletion(updatedProgress, scenarioId, {
@@ -59,12 +72,7 @@ export const useScenarioCompletion = ({
     setNewAchievements(newAchievementObjects);
     setShowMissionDebrief(true);
     
-    return {
-      scoreEarned,
-      stepsCompleted: currentScenario.steps.length,
-      timeSpent: `${Math.floor(timeSpent / 60)}m ${timeSpent % 60}s`,
-      wrongAttempts: statsToUse.wrongAttempts
-    };
+    return finalStats;
   }, [
     isMissionCompleted,
     scenarioStats,
@@ -79,6 +87,7 @@ export const useScenarioCompletion = ({
     newAchievements,
     showMissionDebrief,
     setShowMissionDebrief,
-    completeScenario
+    completeScenario,
+    completionStats  // RETURN THIS
   };
 };

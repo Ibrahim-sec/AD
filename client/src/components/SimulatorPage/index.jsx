@@ -62,7 +62,8 @@ export default function SimulatorPage({
     newAchievements,
     showMissionDebrief,
     setShowMissionDebrief,
-    completeScenario
+    completeScenario,
+    completionStats
   } = useScenarioCompletion({
     scenarioId,
     currentScenario,
@@ -91,8 +92,7 @@ export default function SimulatorPage({
     setCurrentStep: state.setCurrentStep,
     setState: state.setState,
     completeScenario,
-    scenarioStats: state.scenarioStats  // ADD THIS LINE
-
+    scenarioStats: state.scenarioStats
   });
   
   // Initialize command handling
@@ -362,8 +362,9 @@ export default function SimulatorPage({
           }}
           type="debrief"
           scenario={currentScenario}
-          stats={state.scenarioStats}
+          stats={completionStats}
           newAchievements={newAchievements}
+          progress={progress}
         />
         
         {showQuiz && (
