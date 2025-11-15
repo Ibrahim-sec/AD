@@ -1,5 +1,7 @@
+// client/src/components/SimulatorPage.jsx
+
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { Redirect, Link } from 'wouter';
+import { Redirect } from 'wouter';
 import Header from './Header';
 import GuidePanel from './GuidePanel';
 import AttackerPanel from './AttackerPanel';
@@ -21,8 +23,13 @@ import {
   ResizablePanel,
   ResizableHandle,
 } from "@/components/ui/resizable";
-import { Activity, AlertTriangle } from 'lucide-react';
+import { Activity } from 'lucide-react';
 import MachineInfoSheet from './MachineInfoSheet';
+
+// Import new utility functions
+import { validateCommand, isBuiltInCommand } from '../utils/commandValidator.js';
+import { matchAgainstMultiple } from '../utils/commandMatcher.js';
+import { generateErrorMessages, generateSuccessMessages } from '../utils/commandSuggestions.js';
 
 // ============================================================================
 // CONSTANTS
@@ -31,7 +38,6 @@ import MachineInfoSheet from './MachineInfoSheet';
 const COMMAND_HISTORY_KEY = 'ad-simulator-command-history';
 const MAX_COMMAND_HISTORY = 100;
 const SUBSHELL_TIMEOUT = 120000; // 2 minutes
-const MAX_COMMAND_LENGTH = 1000;
 
 // ============================================================================
 // HELPER FUNCTIONS
@@ -82,119 +88,19 @@ const getSubShellPrompt = (shell) => {
 };
 
 /**
- * Normalize command for comparison
+ * Get expected commands array from step
  */
-const normalizeCommand = (cmd) => {
-  if (!cmd || typeof cmd !== 'string') return '';
+const getExpectedCommands = (step) => {
+  if (!step) return [];
   
-  return cmd
-    .trim()
-    .toLowerCase()
-    .replace(/\\/g, '/') // Normalize path separators
-    .replace(/\s+/g, ' ') // Normalize whitespace
-    .replace(/["'`]/g, '') // Remove quotes
-    .replace(/;+$/, '') // Remove trailing semicolons
-    .trim();
-};
-
-/**
- * Fuzzy match command with confidence score
- */
-const fuzzyMatchCommand = (input, expected, threshold = 0.85) => {
-  const normalizedInput = normalizeCommand(input);
-  const normalizedExpected = normalizeCommand(expected);
-  
-  // Exact match
-  if (normalizedInput === normalizedExpected) {
-    return { match: true, confidence: 1.0 };
+  // Support both single command and multiple commands
+  if (Array.isArray(step.expectedCommands) && step.expectedCommands.length > 0) {
+    return step.expectedCommands;
+  } else if (step.expectedCommand) {
+    return [step.expectedCommand];
   }
   
-  // Check if input contains all key parts of expected command
-  const expectedParts = normalizedExpected
-    .split(' ')
-    .filter(p => p.length > 2 && !['the', 'and', 'for', 'with'].includes(p));
-  
-  const inputParts = normalizedInput.split(' ');
-  
-  const matchedParts = expectedParts.filter(part => 
-    inputParts.some(inputPart => 
-      inputPart.includes(part) || part.includes(inputPart) ||
-      levenshteinDistance(inputPart, part) <= 2
-    )
-  );
-  
-  const confidence = expectedParts.length > 0 ? matchedParts.length / expectedParts.length : 0;
-  
-  return {
-    match: confidence >= threshold,
-    confidence,
-    suggestion: confidence < threshold && confidence > 0.5 ? expected : null
-  };
-};
-
-/**
- * Calculate Levenshtein distance between two strings
- */
-const levenshteinDistance = (str1, str2) => {
-  const matrix = [];
-  
-  for (let i = 0; i <= str2.length; i++) {
-    matrix[i] = [i];
-  }
-  
-  for (let j = 0; j <= str1.length; j++) {
-    matrix[0][j] = j;
-  }
-  
-  for (let i = 1; i <= str2.length; i++) {
-    for (let j = 1; j <= str1.length; j++) {
-      if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
-        matrix[i][j] = matrix[i - 1][j - 1];
-      } else {
-        matrix[i][j] = Math.min(
-          matrix[i - 1][j - 1] + 1,
-          matrix[i][j - 1] + 1,
-          matrix[i - 1][j] + 1
-        );
-      }
-    }
-  }
-  
-  return matrix[str2.length][str1.length];
-};
-
-/**
- * Validate command input
- */
-const validateCommand = (command) => {
-  if (!command || typeof command !== 'string') {
-    return { valid: false, error: 'Invalid command' };
-  }
-  
-  const sanitized = command.trim();
-  
-  if (sanitized.length === 0) {
-    return { valid: false, error: 'Empty command' };
-  }
-  
-  if (sanitized.length > MAX_COMMAND_LENGTH) {
-    return { valid: false, error: `Command too long (max ${MAX_COMMAND_LENGTH} characters)` };
-  }
-  
-  // Prevent XSS attempts
-  const dangerousPatterns = [
-    /<script/i,
-    /javascript:/i,
-    /onerror=/i,
-    /onclick=/i,
-    /<iframe/i
-  ];
-  
-  if (dangerousPatterns.some(pattern => pattern.test(sanitized))) {
-    return { valid: false, error: 'Invalid command syntax' };
-  }
-  
-  return { valid: true, command: sanitized };
+  return [];
 };
 
 // ============================================================================
@@ -710,7 +616,7 @@ export default function SimulatorPage({
     }));
   }, [isMissionCompleted, scenarioStats, progress, scenarioId, currentScenario]);
   
-  // ========== HANDLE COMMAND SUBMIT ==========
+  // ========== HANDLE COMMAND SUBMIT (NEW IMPROVED VERSION) ==========
   
   const handleCommandSubmit = (command) => {
     // Validate command
@@ -722,8 +628,6 @@ export default function SimulatorPage({
       ]);
       return;
     }
-    
-    const normalizedInput = normalizeCommand(validation.command);
     
     // Add to command history
     if (validation.command && !commandHistory.includes(validation.command)) {
@@ -746,79 +650,136 @@ export default function SimulatorPage({
     
     // Handle sub-shell commands
     if (subShell) {
-      const step = currentScenario.steps[currentStep];
+      handleSubShellCommand(validation.command);
+      return;
+    }
+    
+    // Handle built-in commands (ls, cat, etc.)
+    if (isBuiltInCommand(validation.command)) {
+      handleBuiltInCommand(validation.command);
+      return;
+    }
+    
+    // Match scenario step command using NEW IMPROVED MATCHER
+    const step = currentScenario.steps[currentStep];
+    if (!step) {
+      setAttackerHistory(prev => [
+        ...prev,
+        { type: 'error', text: '[!] Simulation complete. Select a new scenario to restart.' }
+      ]);
+      return;
+    }
+    
+    const expectedCommands = getExpectedCommands(step);
+    
+    if (expectedCommands.length === 0) {
+      // No expected command for this step, skip
+      return;
+    }
+    
+    // Resolve loot variables in expected commands
+    const resolvedExpected = expectedCommands.map(cmd => resolveLootVariables(cmd)).filter(Boolean);
+    if (resolvedExpected.length === 0) {
+      return; // Loot resolution failed
+    }
+    
+    // Use NEW IMPROVED MATCHER
+    const matchResult = matchAgainstMultiple(validation.command, resolvedExpected, tutorialMode);
+    
+    if (!matchResult.match) {
+      // Command didn't match - increment wrong attempts
+      setScenarioStats(prev => ({ ...prev, wrongAttempts: prev.wrongAttempts + 1 }));
       
-      // Built-in sub-shell commands
-      if (normalizedInput === 'help') {
-        const commands = step.subShellCommands?.[subShell]?.commands || [];
-        setAttackerHistory(prev => [
-          ...prev,
-          { type: 'info', text: `Available ${subShell} commands:` },
-          ...commands.map(c => ({ type: 'info', text: `  - ${c.expectedCommand || c.expectedCommands?.[0]}` })),
-          { type: 'info', text: 'Type "exit" to leave sub-shell' }
-        ]);
-        return;
-      }
+      // Generate helpful error messages using new utility
+      const errorMessages = generateErrorMessages(matchResult, validation.command, tutorialMode);
       
-      if (normalizedInput === 'exit') {
-        if (step.expectedCommand === 'exit') {
-          processingRef.current = true;
-          setIsProcessing(true);
-          processStepOutput(step);
-        } else {
-          setSubShell(null);
-          if (subShellTimeout) clearTimeout(subShellTimeout);
-          setAttackerHistory(prev => [
-            ...prev,
-            { type: 'system', text: 'Exiting sub-shell...' }
-          ]);
-        }
-        return;
-      }
+      errorMessages.forEach(msg => {
+        setAttackerHistory(prev => [...prev, msg]);
+      });
       
-      // Match sub-shell command
-      const subCommands = step.subShellCommands?.[subShell]?.commands || [];
-      let subMatch = null;
-      
-      for (const cmdData of subCommands) {
-        const expectedList = Array.isArray(cmdData.expectedCommands)
-          ? cmdData.expectedCommands
-          : [cmdData.expectedCommand];
-        
-        for (const expectedCmd of expectedList) {
-          if (!expectedCmd) continue;
-          
-          const resolvedCmd = resolveLootVariables(expectedCmd);
-          if (resolvedCmd === null) return; // Loot resolution failed
-          
-          const matchResult = fuzzyMatchCommand(normalizedInput, resolvedCmd, tutorialMode ? 0.75 : 0.90);
-          
-          if (matchResult.match) {
-            subMatch = cmdData;
-            break;
-          }
-        }
-        
-        if (subMatch) break;
-      }
-      
-      if (subMatch) {
+      return;
+    }
+    
+    // Command matched! Show success message
+    const successMessages = generateSuccessMessages(matchResult);
+    successMessages.forEach(msg => {
+      setAttackerHistory(prev => [...prev, msg]);
+    });
+    
+    // Process step
+    processingRef.current = true;
+    setIsProcessing(true);
+    processStepOutput(step);
+  };
+  
+  // ========== HANDLE SUB-SHELL COMMAND ==========
+  
+  const handleSubShellCommand = (command) => {
+    const step = currentScenario.steps[currentStep];
+    const normalizedInput = command.trim().toLowerCase();
+    
+    // Built-in sub-shell commands
+    if (normalizedInput === 'help') {
+      const commands = step.subShellCommands?.[subShell]?.commands || [];
+      setAttackerHistory(prev => [
+        ...prev,
+        { type: 'info', text: `Available ${subShell} commands:` },
+        ...commands.map(c => ({ type: 'info', text: `  - ${c.expectedCommand || c.expectedCommands?.[0]}` })),
+        { type: 'info', text: 'Type "exit" to leave sub-shell' }
+      ]);
+      return;
+    }
+    
+    if (normalizedInput === 'exit') {
+      if (step.expectedCommand === 'exit') {
         processingRef.current = true;
         setIsProcessing(true);
-        processSubCommandOutput(subMatch);
+        processStepOutput(step);
       } else {
+        setSubShell(null);
+        if (subShellTimeout) clearTimeout(subShellTimeout);
         setAttackerHistory(prev => [
           ...prev,
-          { type: 'error', text: `[!] ${subShell} error: command not recognized: "${validation.command}"` },
-          { type: 'info', text: `[*] Type "help" for available commands` },
-          { type: 'sub-prompt', text: getSubShellPrompt(subShell) }
+          { type: 'system', text: 'Exiting sub-shell...' }
         ]);
       }
       return;
     }
     
-    // Handle built-in commands (ls, cat, etc.)
-    if (normalizedInput === 'ls' || normalizedInput === 'dir') {
+    // Match sub-shell command using improved matcher
+    const subCommands = step.subShellCommands?.[subShell]?.commands || [];
+    
+    for (const cmdData of subCommands) {
+      const expectedList = getExpectedCommands(cmdData);
+      const resolvedExpected = expectedList.map(cmd => resolveLootVariables(cmd)).filter(Boolean);
+      
+      if (resolvedExpected.length === 0) continue;
+      
+      const matchResult = matchAgainstMultiple(command, resolvedExpected, tutorialMode);
+      
+      if (matchResult.match) {
+        processingRef.current = true;
+        setIsProcessing(true);
+        processSubCommandOutput(cmdData);
+        return;
+      }
+    }
+    
+    // No match found
+    setAttackerHistory(prev => [
+      ...prev,
+      { type: 'error', text: `[!] ${subShell} error: command not recognized: "${command}"` },
+      { type: 'info', text: `[*] Type "help" for available commands` },
+      { type: 'sub-prompt', text: getSubShellPrompt(subShell) }
+    ]);
+  };
+  
+  // ========== HANDLE BUILT-IN COMMANDS ==========
+  
+  const handleBuiltInCommand = (command) => {
+    const normalizedCmd = command.trim().toLowerCase();
+    
+    if (normalizedCmd === 'ls' || normalizedCmd === 'dir') {
       const files = Object.keys(simulatedFileSystem);
       if (files.length === 0) {
         setAttackerHistory(prev => [
@@ -835,8 +796,8 @@ export default function SimulatorPage({
       return;
     }
     
-    if (normalizedInput.startsWith('cat ') || normalizedInput.startsWith('type ')) {
-      const fileName = validation.command.split(' ')[1];
+    if (normalizedCmd.startsWith('cat ') || normalizedCmd.startsWith('type ')) {
+      const fileName = command.split(' ')[1];
       const file = simulatedFileSystem[fileName?.toLowerCase()];
       if (file) {
         setAttackerHistory(prev => [
@@ -852,86 +813,11 @@ export default function SimulatorPage({
       return;
     }
     
-    // Match scenario step command
-    const step = currentScenario.steps[currentStep];
-    if (!step) {
-      setAttackerHistory(prev => [
-        ...prev,
-        { type: 'error', text: '[!] Simulation complete. Select a new scenario to restart.' }
-      ]);
-      return;
-    }
-    
-    const expectedList = Array.isArray(step.expectedCommands) && step.expectedCommands.length > 0
-      ? step.expectedCommands
-      : step.expectedCommand
-        ? [step.expectedCommand]
-        : [];
-    
-    let isMatch = false;
-    let bestSuggestion = null;
-    
-    for (const expectedCmd of expectedList) {
-      if (!expectedCmd) continue;
-      
-      const resolvedCmd = resolveLootVariables(expectedCmd);
-      if (resolvedCmd === null) return;
-      
-      const matchResult = fuzzyMatchCommand(normalizedInput, resolvedCmd, tutorialMode ? 0.75 : 0.90);
-      
-      if (matchResult.match) {
-        isMatch = true;
-        break;
-      } else if (matchResult.suggestion && !bestSuggestion) {
-        bestSuggestion = matchResult.suggestion;
-      }
-    }
-    
-    if (!isMatch) {
-      setScenarioStats(prev => ({ ...prev, wrongAttempts: prev.wrongAttempts + 1 }));
-      
-      // Check common mistakes
-      const mistakes = Array.isArray(step.commonMistakes) ? step.commonMistakes : [];
-      let handledMistake = false;
-      
-      for (const mistake of mistakes) {
-        if (!mistake || !mistake.pattern) continue;
-        try {
-          const regex = new RegExp(mistake.pattern, 'i');
-          if (regex.test(validation.command)) {
-            handledMistake = true;
-            setAttackerHistory(prev => [
-              ...prev,
-              { type: 'error', text: `[!] ${mistake.message}` }
-            ]);
-            break;
-          }
-        } catch (err) {
-          console.error('Regex error:', err);
-        }
-      }
-      
-      if (!handledMistake) {
-        if (tutorialMode) {
-          setAttackerHistory(prev => [
-            ...prev,
-            { type: 'error', text: `[!] Not quite right. Hint: ${step.hintShort || 'Try again'}` }
-          ]);
-        } else {
-          setAttackerHistory(prev => [
-            ...prev,
-            { type: 'error', text: `[!] Command not recognized or incorrect for this step.` },
-            ...(bestSuggestion ? [{ type: 'info', text: `[*] Did you mean: ${bestSuggestion}?` }] : [])
-          ]);
-        }
-      }
-      return;
-    }
-    
-    // Command matched - process step
-    processingRef.current = true;
-    setIsProcessing(true);
-    processStepOutput(step);
+    // Other built-ins
+    setAttackerHistory(prev => [
+      ...prev,
+      { type: 'info', text: `[*] Built-in command: ${command}` }
+    ]);
   };
   
   // ========== SHOW HINT ==========
