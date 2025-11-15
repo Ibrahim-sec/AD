@@ -1,3 +1,5 @@
+// client/src/data/theory/index.js
+
 import { kerberoastingTheory } from './kerberoasting';
 import { asrepRoastingTheory } from './asrepRoasting';
 import { dcsyncTheory } from './dcsync';
@@ -22,4 +24,33 @@ export const theoryModules = {
   'zerologon': zerologonTheory,
   'printnightmare': printNightmareTheory,
   'skeleton-key': skeletonKeyTheory
+};
+
+
+/**
+ * Get theory module by scenario ID
+ */
+export const getTheoryModule = (scenarioId) => {
+  return theoryModules[scenarioId] || null;
+};
+
+/**
+ * Check if scenario has theory module
+ */
+export const hasTheoryModule = (scenarioId) => {
+  return scenarioId in theoryModules;
+};
+
+/**
+ * Get all theory modules
+ */
+export const getAllTheoryModules = () => {
+  return Object.values(theoryModules);
+};
+
+/**
+ * Get theory modules by difficulty
+ */
+export const getTheoryModulesByDifficulty = (difficulty) => {
+  return Object.values(theoryModules).filter(module => module.difficulty === difficulty);
 };
