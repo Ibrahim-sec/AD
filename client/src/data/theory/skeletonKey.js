@@ -1,4 +1,3 @@
-javascript
 import { skeletonKeyDiagram } from '@/data/diagrams';
 
 export const skeletonKeyTheory = {
