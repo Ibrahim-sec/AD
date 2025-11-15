@@ -7,7 +7,8 @@ export const skeletonKeyTheory = {
   estimatedTime: '10 minutes',
   difficulty: 'Expert',
   xpReward: 200,
-  
+  diagram: skeletonKeyDiagram,
+
   sections: [
     {
       id: 'intro',

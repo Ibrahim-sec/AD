@@ -1,3 +1,5 @@
+// client/src/data/theory/zerologon.js
+
 import { zerologonDiagram } from '@/data/diagrams';
 
 export const zerologonTheory = {
@@ -7,6 +9,7 @@ export const zerologonTheory = {
   estimatedTime: '10 minutes',
   difficulty: 'Expert',
   xpReward: 220,
+  diagram: zerologonDiagram,
 
   sections: [
     {

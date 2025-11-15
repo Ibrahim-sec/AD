@@ -7,6 +7,7 @@ export const gppPasswordsTheory = {
   estimatedTime: '8 minutes',
   difficulty: 'Intermediate',
   xpReward: 110,
+  diagram: gppPasswordsDiagram,
 
   
   sections: [
