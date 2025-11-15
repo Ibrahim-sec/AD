@@ -1,7 +1,7 @@
 // client/src/components/GuidePanel.jsx
 
 import { useState, useEffect } from 'react';
-import { Book, HelpCircle, Lightbulb, Map, NavigationIcon, Eye, ChevronRight } from 'lucide-react';
+import { Book, HelpCircle, Lightbulb, Map, NavigationIcon, Eye, ChevronRight, Maximize2, Minimize2, X } from 'lucide-react';
 import { hasTheoryModule, getTheoryModule } from '../data/theory/index.js';
 import TheoryModal from './TheoryModal';
 import InteractiveNetworkMap from './InteractiveNetworkMap';
@@ -20,6 +20,7 @@ export default function GuidePanel({
   const [showTheoryModal, setShowTheoryModal] = useState(false);
   const [activeTab, setActiveTab] = useState('guide'); // 'guide' or 'network'
   const [showMapSuggestion, setShowMapSuggestion] = useState(false);
+  const [isMapFullscreen, setIsMapFullscreen] = useState(false);
   
   const hasTheory = hasTheoryModule(scenario?.id);
   const theoryModule = hasTheory ? getTheoryModule(scenario.id) : null;
@@ -78,6 +79,18 @@ export default function GuidePanel({
       return () => clearTimeout(timer);
     }
   }, [currentStep, step?.description, activeTab]);
+
+  // ESC key to exit fullscreen
+  useEffect(() => {
+    const handleEscape = (e) => {
+      if (e.key === 'Escape' && isMapFullscreen) {
+        setIsMapFullscreen(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [isMapFullscreen]);
 
   // Get machine icon color
   const getMachineColor = (machineName) => {
@@ -340,19 +353,30 @@ export default function GuidePanel({
               <div className="p-4 border-b border-white/10">
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="text-sm font-semibold text-white">Network Topology</h3>
-                  <div className="flex items-center gap-2">
-                    <div className="flex items-center gap-1 text-[10px] text-white/50">
-                      <div className="w-2 h-2 rounded-full bg-[#2D9CDB]" />
-                      <span>Active</span>
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1 text-[10px] text-white/50">
+                        <div className="w-2 h-2 rounded-full bg-[#2D9CDB]" />
+                        <span>Active</span>
+                      </div>
+                      <div className="flex items-center gap-1 text-[10px] text-white/50">
+                        <div className="w-2 h-2 rounded-full bg-white/20" />
+                        <span>Inactive</span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1 text-[10px] text-white/50">
-                      <div className="w-2 h-2 rounded-full bg-white/20" />
-                      <span>Inactive</span>
-                    </div>
+                    
+                    {/* Fullscreen Button */}
+                    <button
+                      onClick={() => setIsMapFullscreen(true)}
+                      className="p-1.5 bg-[#2D9CDB]/20 hover:bg-[#2D9CDB]/30 border border-[#2D9CDB]/50 rounded text-[#2D9CDB] transition-all"
+                      title="View Fullscreen"
+                    >
+                      <Maximize2 className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
                 <p className="text-xs text-white/50">
-                  Click on machines to view details
+                  Click on machines to view details • Use mouse wheel to zoom
                 </p>
               </div>
               
@@ -393,6 +417,46 @@ export default function GuidePanel({
           </button>
         </div>
       </div>
+
+      {/* Fullscreen Network Map Modal */}
+      {isMapFullscreen && scenario && scenario.network && (
+        <div className="fixed inset-0 z-50 bg-black/95 backdrop-blur-sm flex flex-col">
+          {/* Fullscreen Header */}
+          <div className="flex-shrink-0 bg-[#101214] border-b border-white/10 p-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Map className="w-5 h-5 text-[#2D9CDB]" />
+              <div>
+                <h2 className="text-lg font-bold text-white">Network Topology - Fullscreen</h2>
+                <p className="text-xs text-white/50">{scenario.network.domain}</p>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-white/50 mr-2">Press ESC to exit</span>
+              <button
+                onClick={() => setIsMapFullscreen(false)}
+                className="p-2 bg-white/5 hover:bg-white/10 rounded-lg text-white/70 hover:text-white transition-all"
+                title="Exit Fullscreen"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+          
+          {/* Fullscreen Map */}
+          <div className="flex-1 overflow-hidden">
+            <InteractiveNetworkMap
+              network={scenario.network}
+              currentStep={currentStep}
+              highlightedMachine={highlightedMachine}
+              highlightedArrow={highlightedArrow}
+              compromisedNodes={getCompromisedNodes()}
+              onNodeClick={onNodeClick}
+              showTraffic={true}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Theory Modal */}
       {showTheoryModal && theoryModule && (
