@@ -11,6 +11,8 @@ import { scenarios, scenarioMap } from './data/scenarios/index.js';
 import { loadProgress, saveProgress } from './lib/progressTracker.js';
 import { checkStorageHealth } from './lib/safeStorage.js';
 import './index.css';
+import ErrorBoundary from './components/ErrorBoundary.tsx';
+
 
 // ============================================================================
 // ERROR BOUNDARY COMPONENT
