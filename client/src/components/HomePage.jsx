@@ -15,10 +15,14 @@ import {
   TrendingUp,
   Award,
   Clock,
-  Book
+  Book,
+  Network
 } from 'lucide-react';
 import { hasTheoryModule, getTheoryModule } from '../data/theory/index.js';
 import TheoryModal from './TheoryModal';
+import { NetworkDiagram } from './diagrams';
+import { adTopologyDiagram } from '@/data/diagrams';
+import '@/styles/diagrams.css';
 
 export default function HomePage({ scenarios, progress, appMode, setAppMode }) {
   const [searchQuery, setSearchQuery] = useState('');
@@ -185,6 +189,43 @@ export default function HomePage({ scenarios, progress, appMode, setAppMode }) {
             </p>
           </motion.div>
         </div>
+      </div>
+
+      {/* AD Network Topology Overview - NEW SECTION */}
+      <div className="max-w-7xl mx-auto px-6 py-12">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          <div className="text-center mb-6">
+            <div className="flex items-center justify-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center">
+                <Network className="w-5 h-5 text-purple-400" />
+              </div>
+              <h2 className="text-2xl font-bold text-white">
+                Active Directory Network Overview
+              </h2>
+            </div>
+            <p className="text-white/60 max-w-2xl mx-auto text-sm">
+              Explore a visual representation of an enterprise AD environment. 
+              Click and drag nodes to understand the network topology and relationships between components.
+            </p>
+          </div>
+
+          <div className="bg-[#1a1d24] rounded-xl border border-white/10 overflow-hidden">
+            <NetworkDiagram 
+              diagramData={adTopologyDiagram}
+              height="550px"
+              showMiniMap={true}
+              interactive={true}
+              onNodeClick={(node) => {
+                console.log('Clicked node:', node);
+                // Optional: Show info modal about the clicked node
+              }}
+            />
+          </div>
+        </motion.div>
       </div>
 
       {/* Main Content */}

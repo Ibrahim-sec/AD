@@ -5,9 +5,6 @@ import { Link } from 'wouter';
 import { Book, Search, Clock, Award, ArrowLeft } from 'lucide-react';
 import { theoryModules } from '../data/theory/index.js';
 import TheoryModal from './TheoryModal';
-import { NetworkDiagram } from './diagrams';
-import { kerberoastingDiagram, asrepRoastingDiagram, adTopologyDiagram } from '@/data/diagrams';
-import '@/styles/diagrams.css';
 
 export default function KnowledgeBase() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -99,57 +96,6 @@ export default function KnowledgeBase() {
               )}
             </button>
           ))}
-        </div>
-
-        {/* Visual Diagrams Section - NEW! */}
-        <div className="mt-12">
-          <h2 className="text-2xl font-bold mb-6 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center">
-              <Book className="w-5 h-5 text-purple-400" />
-            </div>
-            Visual Attack Diagrams
-          </h2>
-
-          <div className="space-y-8">
-            {/* Kerberoasting Diagram */}
-            <div className="bg-[#1a1d24] rounded-xl p-6 border border-white/10">
-              <h3 className="text-xl font-bold mb-2">Kerberoasting Attack Flow</h3>
-              <p className="text-white/60 text-sm mb-4">
-                Visual representation of how Kerberoasting exploits service account tickets to extract password hashes.
-              </p>
-              <NetworkDiagram 
-                diagramData={kerberoastingDiagram}
-                onNodeClick={(node) => console.log('Clicked:', node)}
-                height="500px"
-              />
-            </div>
-
-            {/* AS-REP Roasting Diagram */}
-            <div className="bg-[#1a1d24] rounded-xl p-6 border border-white/10">
-              <h3 className="text-xl font-bold mb-2">AS-REP Roasting Attack Flow</h3>
-              <p className="text-white/60 text-sm mb-4">
-                Exploiting accounts with "Do not require Kerberos preauthentication" enabled.
-              </p>
-              <NetworkDiagram 
-                diagramData={asrepRoastingDiagram}
-                height="500px"
-              />
-            </div>
-
-            {/* AD Topology Diagram */}
-            <div className="bg-[#1a1d24] rounded-xl p-6 border border-white/10">
-              <h3 className="text-xl font-bold mb-2">Active Directory Network Topology</h3>
-              <p className="text-white/60 text-sm mb-4">
-                Enterprise AD environment with domain controllers, trust relationships, and network segments.
-              </p>
-              <NetworkDiagram 
-                diagramData={adTopologyDiagram}
-                showMiniMap={true}
-                interactive={true}
-                height="600px"
-              />
-            </div>
-          </div>
         </div>
       </div>
 
