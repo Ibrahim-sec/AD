@@ -142,9 +142,17 @@ export default function SimulatorPage({
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [customTheme, setCustomTheme] = useState(() => {
     try {
-      return JSON.parse(localStorage.getItem('terminal_theme')) || {};
+      return JSON.parse(localStorage.getItem('terminal_theme')) || {
+        accentColor: '#2D9CDB',
+        terminalText: '#ffffff',
+        terminalBg: '#0a0b0d'
+      };
     } catch (e) {
-      return {};
+      return {
+        accentColor: '#2D9CDB',
+        terminalText: '#ffffff',
+        terminalBg: '#0a0b0d'
+      };
     }
   });
   
@@ -909,9 +917,9 @@ export default function SimulatorPage({
       
       <div 
         style={{
-          '--terminal-text': customTheme.terminalText || '',
-          '--accent-color': customTheme.accentColor || '',
-          '--terminal-bg': customTheme.terminalBg || '',
+          '--terminal-text': customTheme.terminalText || '#ffffff',
+          '--accent-color': customTheme.accentColor || '#2D9CDB',
+          '--terminal-bg': customTheme.terminalBg || '#0a0b0d',
         }}
         className="h-screen w-full flex flex-col overflow-hidden"
       >
@@ -943,7 +951,7 @@ export default function SimulatorPage({
                   const newTutorialMode = !tutorialMode;
                   setTutorialMode(newTutorialMode);
                   
-                  // Create complete progress object before updating
+                  // FIXED: Create complete progress object before updating
                   const updatedProgress = {
                     ...progress,
                     tutorialMode: newTutorialMode,
@@ -952,7 +960,6 @@ export default function SimulatorPage({
                   
                   setProgress(updatedProgress);
                 }}
-
                 highlightedMachine={highlightedMachine}
                 highlightedArrow={highlightedArrow}
                 onShowBriefing={() => setShowMissionBriefing(true)}
@@ -979,6 +986,7 @@ export default function SimulatorPage({
                 onShowHint={() => handleShowHint(currentStep)}
                 hintsAvailable={currentStep < currentScenario.steps.length}
                 subShell={subShell}
+                customTheme={customTheme}
               />
             </ResizablePanel>
           </ResizablePanelGroup>
