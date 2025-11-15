@@ -1,0 +1,300 @@
+/* client/src/styles/diagrams.css */
+
+/* Network Diagram Container */
+.network-diagram-container {
+  position: relative;
+  background: #0a0b0d;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+  margin: 20px 0;
+}
+
+.network-diagram-container.fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  margin: 0;
+  border-radius: 0;
+}
+
+/* Diagram Header */
+.diagram-header {
+  padding: 16px 20px;
+  background: linear-gradient(135deg, #1a1f2e 0%, #0d1117 100%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.diagram-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff;
+  margin: 0 0 8px 0;
+}
+
+.diagram-description {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.6);
+  margin: 0;
+}
+
+/* Custom Nodes */
+.custom-node {
+  padding: 12px;
+  border-radius: 8px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  background: #1a1b1e;
+  min-width: 180px;
+  font-family: inherit;
+  transition: all 0.3s ease;
+}
+
+.custom-node:hover {
+  border-color: #2D9CDB;
+  box-shadow: 0 0 20px rgba(45, 156, 219, 0.4);
+  transform: translateY(-2px);
+}
+
+/* Machine Node */
+.machine-node {
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+}
+
+.machine-node.compromised {
+  border-color: #ef4444;
+  background: linear-gradient(135deg, #7f1d1d 0%, #450a0a 100%);
+}
+
+.machine-node.highlighted {
+  border-color: #f59e0b;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 10px rgba(245, 158, 11, 0.5); }
+  50% { box-shadow: 0 0 20px rgba(245, 158, 11, 0.8); }
+}
+
+.node-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.node-icon {
+  color: #2D9CDB;
+  flex-shrink: 0;
+}
+
+.node-role {
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.node-content {
+  color: #fff;
+}
+
+.node-name {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.node-ip, .node-os {
+  font-size: 12px;
+  font-family: 'Courier New', monospace;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.node-badge {
+  margin-top: 8px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.compromised-badge {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+  border: 1px solid #ef4444;
+}
+
+/* Attack Step Node */
+.attack-step-node {
+  background: linear-gradient(135deg, #065f46 0%, #064e3b 100%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 250px;
+}
+
+.step-number {
+  width: 32px;
+  height: 32px;
+  background: #10b981;
+  color: #fff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.step-content {
+  flex: 1;
+}
+
+.step-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 4px;
+}
+
+.step-description {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* Concept Node */
+.concept-node {
+  background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%);
+  text-align: center;
+  min-width: 140px;
+}
+
+.concept-icon {
+  font-size: 32px;
+  margin-bottom: 8px;
+}
+
+.concept-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 4px;
+}
+
+.concept-description {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* Diagram Controls */
+.diagram-panel {
+  display: flex;
+  gap: 8px;
+}
+
+.panel-button {
+  width: 36px;
+  height: 36px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.panel-button:hover {
+  background: #2D9CDB;
+  border-color: #2D9CDB;
+}
+
+/* Legend */
+.diagram-legend {
+  background: rgba(0, 0, 0, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 12px;
+  min-width: 160px;
+}
+
+.legend-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.legend-items {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.legend-color {
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* React Flow Overrides */
+.react-flow__node {
+  cursor: pointer;
+}
+
+.react-flow__edge-path {
+  stroke-width: 2;
+}
+
+.react-flow__edge-textbg {
+  fill: rgba(0, 0, 0, 0.8);
+}
+
+.react-flow__edge-text {
+  fill: #fff;
+  font-size: 11px;
+}
+
+.react-flow__controls {
+  background: rgba(0, 0, 0, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+}
+
+.react-flow__controls-button {
+  background: transparent;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.react-flow__controls-button:hover {
+  background: #2D9CDB;
+}
+
+.react-flow__minimap {
+  background: rgba(0, 0, 0, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+}
