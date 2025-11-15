@@ -63,7 +63,8 @@ export default function SimulatorPage({
     showMissionDebrief,
     setShowMissionDebrief,
     completeScenario,
-    completionStats
+    completionStats,
+    resetCompletion
   } = useScenarioCompletion({
     scenarioId,
     currentScenario,
@@ -149,7 +150,8 @@ export default function SimulatorPage({
     state.setScenarioStats(initialState.scenarioStats);
     state.setHintsShown(initialState.hintsShown);
     processingRef.current = false;
-  }, [scenarioId]);
+    resetCompletion(); // Reset completion state when scenario changes
+  }, [scenarioId, resetCompletion]);
 
   // Sub-shell timeout
   useEffect(() => {

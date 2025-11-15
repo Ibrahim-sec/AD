@@ -1,6 +1,6 @@
 // client/src/components/SimulatorPage/hooks/useScenarioCompletion.js
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { calculateScenarioScore } from '@/lib/simulator/constants';
 import { 
   saveProgress, 
@@ -19,10 +19,20 @@ export const useScenarioCompletion = ({
   const [isMissionCompleted, setIsMissionCompleted] = useState(false);
   const [newAchievements, setNewAchievements] = useState([]);
   const [showMissionDebrief, setShowMissionDebrief] = useState(false);
-  const [completionStats, setCompletionStats] = useState(null); // ADD THIS
+  const [completionStats, setCompletionStats] = useState(null);
+  
+  // ADD THIS - prevent multiple simultaneous completions
+  const completionInProgressRef = useRef(false);
 
   const completeScenario = useCallback((currentStats) => {
-    if (isMissionCompleted) return;
+    // Prevent multiple simultaneous calls
+    if (completionInProgressRef.current || isMissionCompleted) {
+      console.log('Completion already in progress or completed, skipping...');
+      return;
+    }
+    
+    // Set flag immediately
+    completionInProgressRef.current = true;
     
     // Use passed stats or fallback to closure stats
     const statsToUse = currentStats || scenarioStats;
@@ -82,12 +92,22 @@ export const useScenarioCompletion = ({
     setProgress
   ]);
 
+  // ADD THIS - reset completion flag when scenario changes
+  const resetCompletion = useCallback(() => {
+    setIsMissionCompleted(false);
+    completionInProgressRef.current = false;
+    setCompletionStats(null);
+    setNewAchievements([]);
+    setShowMissionDebrief(false);
+  }, []);
+
   return {
     isMissionCompleted,
     newAchievements,
     showMissionDebrief,
     setShowMissionDebrief,
     completeScenario,
-    completionStats  // RETURN THIS
+    completionStats,
+    resetCompletion  // ADD THIS
   };
 };
