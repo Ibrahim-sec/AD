@@ -50,6 +50,20 @@ export default function GuidePanel({
 
   const currentPosition = getCurrentPosition();
 
+  // Get compromised nodes based on progress
+  const getCompromisedNodes = () => {
+    const compromised = ['attacker']; // Attacker is always "compromised"
+    
+    // Add logic based on scenario completion or current step
+    if (progress?.scenariosCompleted?.includes(scenario?.id)) {
+      compromised.push('target', 'dc');
+    } else if (currentStep > scenario?.steps?.length / 2) {
+      compromised.push('target');
+    }
+    
+    return compromised;
+  };
+
   // Auto-suggest network map at key moments
   useEffect(() => {
     // Show suggestion when moving to steps that involve network movement
@@ -345,12 +359,13 @@ export default function GuidePanel({
               <div className="flex-1 overflow-hidden relative">
                 {scenario && scenario.network && scenario.network.attacker && scenario.network.target ? (
                   <InteractiveNetworkMap
-                    scenario={scenario}
+                    network={scenario.network}
                     currentStep={currentStep}
                     highlightedMachine={highlightedMachine}
                     highlightedArrow={highlightedArrow}
+                    compromisedNodes={getCompromisedNodes()}
                     onNodeClick={onNodeClick}
-                    progress={progress}
+                    showTraffic={true}
                   />
                 ) : (
                   <div className="flex items-center justify-center h-full">
