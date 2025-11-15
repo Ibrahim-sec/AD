@@ -21,6 +21,7 @@ import {
 import { hasTheoryModule, getTheoryModule } from '../data/theory/index.js';
 import TheoryModal from './TheoryModal';
 import { NetworkDiagram } from './diagrams';
+import NodeInfoModal from './diagrams/NodeInfoModal';
 import { adTopologyDiagram } from '@/data/diagrams';
 import '@/styles/diagrams.css';
 
@@ -28,6 +29,7 @@ export default function HomePage({ scenarios, progress, appMode, setAppMode }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDifficulty, setSelectedDifficulty] = useState('all');
   const [showFilters, setShowFilters] = useState(false);
+  const [selectedNode, setSelectedNode] = useState(null);
 
   // Calculate statistics
   const stats = useMemo(() => {
@@ -191,7 +193,7 @@ export default function HomePage({ scenarios, progress, appMode, setAppMode }) {
         </div>
       </div>
 
-      {/* AD Network Topology Overview - NEW SECTION */}
+      {/* AD Network Topology Overview */}
       <div className="max-w-7xl mx-auto px-6 py-12">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -209,7 +211,7 @@ export default function HomePage({ scenarios, progress, appMode, setAppMode }) {
             </div>
             <p className="text-white/60 max-w-2xl mx-auto text-sm">
               Explore a visual representation of an enterprise AD environment. 
-              Click and drag nodes to understand the network topology and relationships between components.
+              <strong className="text-[#2D9CDB]"> Click any node</strong> to learn about its role, attack vectors, and defenses.
             </p>
           </div>
 
@@ -219,13 +221,17 @@ export default function HomePage({ scenarios, progress, appMode, setAppMode }) {
               height="550px"
               showMiniMap={true}
               interactive={true}
-              onNodeClick={(node) => {
-                console.log('Clicked node:', node);
-                // Optional: Show info modal about the clicked node
-              }}
+              onNodeClick={(node) => setSelectedNode(node)}
             />
           </div>
         </motion.div>
+
+        {/* Node Info Modal */}
+        <NodeInfoModal
+          isOpen={!!selectedNode}
+          onClose={() => setSelectedNode(null)}
+          node={selectedNode}
+        />
       </div>
 
       {/* Main Content */}
