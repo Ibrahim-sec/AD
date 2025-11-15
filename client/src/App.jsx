@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Route, Switch } from 'wouter';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
-import SimulatorPage from './components/SimulatorPage';
+import SimulatorPage from './components/SimulatorPage/index.jsx';
 import ScenarioEditor from './components/ScenarioEditor';
 import HomePage from './components/HomePage';
 import KnowledgeBase from './components/KnowledgeBase';
