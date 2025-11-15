@@ -141,44 +141,6 @@ export const calculateRank = (totalScore) => {
 };
 
 /**
- * Add scenario completion with duplicate prevention
- */
-export const addScenarioCompletion = (progress, scenarioId, stats) => {
-  const updatedProgress = { ...progress };
-  
-  // Prevent duplicate completions
-  if (!updatedProgress.scenariosCompleted.includes(scenarioId)) {
-    updatedProgress.scenariosCompleted = [...updatedProgress.scenariosCompleted, scenarioId];
-  }
-  
-  // Calculate score for this completion
-  const score = calculateScenarioScore(stats.wrongAttempts || 0, stats.hintsUsed || 0);
-  
-  // Update stats for this scenario
-  updatedProgress.scenarioStats[scenarioId] = {
-    ...(updatedProgress.scenarioStats[scenarioId] || {}),
-    lastCompleted: Date.now(),
-    attempts: (updatedProgress.scenarioStats[scenarioId]?.attempts || 0) + 1,
-    bestScore: Math.max(updatedProgress.scenarioStats[scenarioId]?.bestScore || 0, score),
-    lastScore: score,
-    wrongAttempts: stats.wrongAttempts || 0,
-    hintsUsed: stats.hintsUsed || 0,
-    timeSpent: stats.timeSpent || 0
-  };
-  
-  // Update total score (with max limit)
-  updatedProgress.totalScore = Math.min(
-    updatedProgress.totalScore + score,
-    MAX_SCORE
-  );
-  
-  // Recalculate rank
-  updatedProgress.rank = calculateRank(updatedProgress.totalScore);
-  
-  return updatedProgress;
-};
-
-/**
  * Calculate scenario score based on performance
  */
 const calculateScenarioScore = (wrongAttempts, hintsUsed) => {
@@ -190,6 +152,49 @@ const calculateScenarioScore = (wrongAttempts, hintsUsed) => {
     return Math.max(0, 10 - (wrongAttempts * 2)); // Penalty for mistakes
   }
   return 0;
+};
+
+/**
+ * Add scenario completion with duplicate prevention
+ */
+export const addScenarioCompletion = (progress, scenarioId, stats) => {
+  const updatedProgress = { ...progress };
+  
+  // Check if this is the first completion
+  const isFirstCompletion = !updatedProgress.scenariosCompleted.includes(scenarioId);
+  
+  // Prevent duplicate completions in array
+  if (isFirstCompletion) {
+    updatedProgress.scenariosCompleted = [...updatedProgress.scenariosCompleted, scenarioId];
+  }
+  
+  // Calculate score for this completion
+  const score = calculateScenarioScore(stats.wrongAttempts || 0, stats.hintsUsed || 0);
+  
+  // Update stats for this scenario (always update stats even on replays)
+  updatedProgress.scenarioStats[scenarioId] = {
+    ...(updatedProgress.scenarioStats[scenarioId] || {}),
+    lastCompleted: Date.now(),
+    attempts: (updatedProgress.scenarioStats[scenarioId]?.attempts || 0) + 1,
+    bestScore: Math.max(updatedProgress.scenarioStats[scenarioId]?.bestScore || 0, score),
+    lastScore: score,
+    wrongAttempts: stats.wrongAttempts || 0,
+    hintsUsed: stats.hintsUsed || 0,
+    timeSpent: stats.timeSpent || 0
+  };
+  
+  // Only add score to total on first completion
+  if (isFirstCompletion) {
+    updatedProgress.totalScore = Math.min(
+      updatedProgress.totalScore + score,
+      MAX_SCORE
+    );
+  }
+  
+  // Recalculate rank
+  updatedProgress.rank = calculateRank(updatedProgress.totalScore);
+  
+  return updatedProgress;
 };
 
 /**
