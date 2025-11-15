@@ -1,7 +1,7 @@
 // client/src/components/GuidePanel.jsx
 
 import { useState, useEffect } from 'react';
-import { Book, HelpCircle, Lightbulb, Map, NavigationIcon, Eye, ChevronRight, Maximize2, Minimize2, X } from 'lucide-react';
+import { Book, HelpCircle, Lightbulb, Map, NavigationIcon, Eye, ChevronRight, Maximize2, X } from 'lucide-react';
 import { hasTheoryModule, getTheoryModule } from '../data/theory/index.js';
 import TheoryModal from './TheoryModal';
 import InteractiveNetworkMap from './InteractiveNetworkMap';
@@ -31,7 +31,6 @@ export default function GuidePanel({
 
   // Determine current attack position in network
   const getCurrentPosition = () => {
-    // Logic to determine which machines are involved in current step
     const positions = [];
     
     if (currentStep === 0) {
@@ -53,9 +52,8 @@ export default function GuidePanel({
 
   // Get compromised nodes based on progress
   const getCompromisedNodes = () => {
-    const compromised = ['attacker']; // Attacker is always "compromised"
+    const compromised = ['attacker'];
     
-    // Add logic based on scenario completion or current step
     if (progress?.scenariosCompleted?.includes(scenario?.id)) {
       compromised.push('target', 'dc');
     } else if (currentStep > scenario?.steps?.length / 2) {
@@ -67,7 +65,6 @@ export default function GuidePanel({
 
   // Auto-suggest network map at key moments
   useEffect(() => {
-    // Show suggestion when moving to steps that involve network movement
     const networkKeywords = ['connect', 'access', 'move', 'lateral', 'domain controller', 'dc', 'compromise'];
     const hasNetworkMovement = networkKeywords.some(keyword => 
       step?.description?.toLowerCase().includes(keyword)
@@ -100,7 +97,7 @@ export default function GuidePanel({
     return 'text-white/30';
   };
 
-  // Safety check - if no scenario data, show loading
+  // Safety check
   if (!scenario) {
     return (
       <div className="h-full flex items-center justify-center bg-[#1a1b1e]">
@@ -268,16 +265,16 @@ export default function GuidePanel({
 
               {step && (
                 <div className="space-y-4">
-                  {/* Step Description */}
+                  {/* Step Description - FIXED VERSION */}
                   <div className="bg-white/5 rounded-lg p-4 border border-white/10">
                     <div className="flex items-start gap-3">
                       <div className="w-8 h-8 rounded-lg bg-[#2D9CDB]/20 flex items-center justify-center flex-shrink-0">
                         <span className="text-sm font-bold text-[#2D9CDB]">{currentStep + 1}</span>
                       </div>
-                      <div className="flex-1">
-                        <h3 className="text-sm font-semibold text-white mb-2">Objective</h3>
-                        <p className="text-xs text-white/70 leading-relaxed">
-                          {step.description}
+                      <div className="flex-1 space-y-2">
+                        <h3 className="text-sm font-semibold text-white uppercase tracking-wide">Objective</h3>
+                        <p className="text-sm text-white/90 leading-relaxed">
+                          {step.description || "Complete this step to progress in the attack simulation"}
                         </p>
                       </div>
                     </div>
@@ -466,7 +463,6 @@ export default function GuidePanel({
           module={theoryModule}
           onComplete={() => {
             setShowTheoryModal(false);
-            // Optional: Track completion
           }}
         />
       )}
