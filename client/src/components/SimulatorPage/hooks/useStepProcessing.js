@@ -21,7 +21,9 @@ export const useStepProcessing = ({
   scenarioStats,
   setSimulatedFiles,
   setSimulatedFileSystem,
-  setCredentialInventory
+  setCredentialInventory,
+  progress,
+  setProgress
 }) => {
   const processingRef = useRef(false);
   const mountedRef = useRef(true);
@@ -70,13 +72,19 @@ export const useStepProcessing = ({
         }
       }
       
-      // Grant loot - FIXED: Pass state setters directly
+      // Grant loot - NOW WITH GLOBAL INVENTORY SUPPORT
       if (lootToGrant && mountedRef.current) {
-        processLootGrant(lootToGrant, {
-          setSimulatedFiles,
-          setSimulatedFileSystem,
-          setCredentialInventory
-        });
+        processLootGrant(
+          lootToGrant,
+          {
+            setSimulatedFiles,
+            setSimulatedFileSystem,
+            setCredentialInventory
+          },
+          progress,
+          setProgress,
+          scenarioId
+        );
       }
       
       // Add defense alert
@@ -137,7 +145,9 @@ export const useStepProcessing = ({
     scenarioStats,
     setSimulatedFiles,
     setSimulatedFileSystem,
-    setCredentialInventory
+    setCredentialInventory,
+    progress,
+    setProgress
   ]);
 
   const processSubCommandOutput = useCallback(async (subCommand) => {
@@ -179,13 +189,19 @@ export const useStepProcessing = ({
         }
       }
       
-      // Grant loot - FIXED: Pass state setters directly
+      // Grant loot - NOW WITH GLOBAL INVENTORY SUPPORT
       if (lootToGrant && mountedRef.current) {
-        processLootGrant(lootToGrant, {
-          setSimulatedFiles,
-          setSimulatedFileSystem,
-          setCredentialInventory
-        });
+        processLootGrant(
+          lootToGrant,
+          {
+            setSimulatedFiles,
+            setSimulatedFileSystem,
+            setCredentialInventory
+          },
+          progress,
+          setProgress,
+          scenarioId
+        );
       }
       
       if (mountedRef.current) {
@@ -211,7 +227,10 @@ export const useStepProcessing = ({
     setIsProcessing,
     setSimulatedFiles,
     setSimulatedFileSystem,
-    setCredentialInventory
+    setCredentialInventory,
+    progress,
+    setProgress,
+    scenarioId
   ]);
 
   return {
