@@ -1,5 +1,7 @@
 // client/src/lib/simulator/lootResolver.js
 
+import { addCredentialToInventory, addFileToInventory, saveProgress } from '../progressTracker';
+
 /**
  * Resolve loot variables in command strings
  * Replaces [loot:username] with actual credential values
@@ -54,30 +56,62 @@ export const harvestCredential = (inventory, type, username, secret) => {
 
 /**
  * Process loot grant from step
- * FIXED: Now uses state setters directly instead of the generic setState
+ * Updated to save to both session state AND global inventory
  */
-export const processLootGrant = (lootToGrant, setters) => {
+export const processLootGrant = (lootToGrant, setters, progress, setProgress, scenarioId) => {
   if (!lootToGrant) return;
   
-  // Grant files to file system
+  let updatedProgress = { ...progress };
+  
+  // Grant files to file system (session only)
   if (lootToGrant.files && setters.setSimulatedFileSystem) {
     setters.setSimulatedFileSystem(prev => ({
       ...prev,
       ...lootToGrant.files
     }));
+    
+    // Also add to global inventory
+    if (progress && setProgress && scenarioId) {
+      Object.entries(lootToGrant.files).forEach(([name, fileData]) => {
+        updatedProgress = addFileToInventory(updatedProgress, {
+          name,
+          content: fileData.content,
+          size: fileData.size
+        }, scenarioId);
+      });
+    }
   }
   
-  // Grant credentials
+  // Grant credentials to both session and global inventory
   if (lootToGrant.creds && setters.setCredentialInventory) {
     lootToGrant.creds.forEach(cred => {
+      // Add to session
       setters.setCredentialInventory(prev =>
         harvestCredential(prev, cred.type, cred.username, cred.secret)
       );
+      
+      // Add to global inventory
+      if (progress && setProgress && scenarioId) {
+        updatedProgress = addCredentialToInventory(updatedProgress, cred, scenarioId);
+      }
     });
   }
   
-  // Grant file downloads - THIS WAS THE BUG
+  // Grant file downloads
   if (lootToGrant.download && setters.setSimulatedFiles) {
     setters.setSimulatedFiles(prev => [...prev, ...lootToGrant.download]);
+    
+    // Also add to global inventory
+    if (progress && setProgress && scenarioId) {
+      lootToGrant.download.forEach(file => {
+        updatedProgress = addFileToInventory(updatedProgress, file, scenarioId);
+      });
+    }
+  }
+  
+  // Save updated progress to localStorage
+  if (progress && setProgress && scenarioId && updatedProgress !== progress) {
+    setProgress(updatedProgress);
+    saveProgress(updatedProgress);
   }
 };
