@@ -2,7 +2,7 @@
 
 const STORAGE_KEY = 'ad-simulator-progress';
 const MAX_SCORE = 10000;
-const VERSION = 2; // Increment when schema changes
+const VERSION = 3; // Increment when schema changes
 
 // Rank thresholds
 const RANK_THRESHOLDS = [
@@ -27,7 +27,21 @@ export const getDefaultProgress = () => ({
   unlockedAchievements: [],
   tutorialMode: true,
   createdAt: Date.now(),
-  updatedAt: Date.now()
+  updatedAt: Date.now(),
+  
+  // NEW: Global inventory system
+  globalInventory: {
+    credentials: [],
+    files: [],
+    compromisedHosts: []
+  },
+  
+  // NEW: Campaign system
+  activeCampaign: null,
+  completedCampaigns: [],
+  
+  // NEW: Recently unlocked scenarios
+  recentlyUnlocked: []
 });
 
 /**
@@ -40,13 +54,33 @@ const migrateProgress = (oldProgress) => {
   
   console.log(`Migrating progress from v${oldProgress.version || 1} to v${VERSION}`);
   
-  // Add migration logic here when schema changes
   const migrated = {
     ...getDefaultProgress(),
     ...oldProgress,
     version: VERSION,
     updatedAt: Date.now()
   };
+  
+  // Ensure new fields exist
+  if (!migrated.globalInventory) {
+    migrated.globalInventory = {
+      credentials: [],
+      files: [],
+      compromisedHosts: []
+    };
+  }
+  
+  if (!migrated.activeCampaign) {
+    migrated.activeCampaign = null;
+  }
+  
+  if (!migrated.completedCampaigns) {
+    migrated.completedCampaigns = [];
+  }
+  
+  if (!migrated.recentlyUnlocked) {
+    migrated.recentlyUnlocked = [];
+  }
   
   return migrated;
 };
@@ -130,7 +164,6 @@ export const clearProgress = () => {
  * Calculate rank based on total score
  */
 export const calculateRank = (totalScore) => {
-  // Find highest rank threshold that score meets
   for (let i = RANK_THRESHOLDS.length - 1; i >= 0; i--) {
     if (totalScore >= RANK_THRESHOLDS[i].minScore) {
       return RANK_THRESHOLDS[i].rank;
@@ -145,11 +178,11 @@ export const calculateRank = (totalScore) => {
  */
 const calculateScenarioScore = (wrongAttempts, hintsUsed) => {
   if (wrongAttempts === 0 && hintsUsed === 0) {
-    return 10; // Perfect score
+    return 10;
   } else if (hintsUsed > 0 && hintsUsed <= 2) {
-    return 5; // Used hints
+    return 5;
   } else if (wrongAttempts > 0) {
-    return Math.max(0, 10 - (wrongAttempts * 2)); // Penalty for mistakes
+    return Math.max(0, 10 - (wrongAttempts * 2));
   }
   return 0;
 };
@@ -160,18 +193,14 @@ const calculateScenarioScore = (wrongAttempts, hintsUsed) => {
 export const addScenarioCompletion = (progress, scenarioId, stats) => {
   const updatedProgress = { ...progress };
   
-  // Check if this is the first completion
   const isFirstCompletion = !updatedProgress.scenariosCompleted.includes(scenarioId);
   
-  // Prevent duplicate completions in array
   if (isFirstCompletion) {
     updatedProgress.scenariosCompleted = [...updatedProgress.scenariosCompleted, scenarioId];
   }
   
-  // Calculate score for this completion
   const score = calculateScenarioScore(stats.wrongAttempts || 0, stats.hintsUsed || 0);
   
-  // Update stats for this scenario (always update stats even on replays)
   updatedProgress.scenarioStats[scenarioId] = {
     ...(updatedProgress.scenarioStats[scenarioId] || {}),
     lastCompleted: Date.now(),
@@ -183,7 +212,6 @@ export const addScenarioCompletion = (progress, scenarioId, stats) => {
     timeSpent: stats.timeSpent || 0
   };
   
-  // Only add score to total on first completion
   if (isFirstCompletion) {
     updatedProgress.totalScore = Math.min(
       updatedProgress.totalScore + score,
@@ -191,7 +219,6 @@ export const addScenarioCompletion = (progress, scenarioId, stats) => {
     );
   }
   
-  // Recalculate rank
   updatedProgress.rank = calculateRank(updatedProgress.totalScore);
   
   return updatedProgress;
@@ -203,7 +230,6 @@ export const addScenarioCompletion = (progress, scenarioId, stats) => {
 export const addQuizScore = (progress, scenarioId, score, correctAnswers, totalQuestions) => {
   const updatedProgress = { ...progress };
   
-  // Store quiz result
   updatedProgress.quizScores[scenarioId] = {
     score,
     correctAnswers,
@@ -212,13 +238,11 @@ export const addQuizScore = (progress, scenarioId, score, correctAnswers, totalQ
     completedAt: Date.now()
   };
   
-  // Add bonus score (with max limit)
   updatedProgress.totalScore = Math.min(
     updatedProgress.totalScore + score,
     MAX_SCORE
   );
   
-  // Recalculate rank
   updatedProgress.rank = calculateRank(updatedProgress.totalScore);
   
   return updatedProgress;
@@ -230,7 +254,6 @@ export const addQuizScore = (progress, scenarioId, score, correctAnswers, totalQ
 export const unlockAchievement = (progress, achievementId) => {
   const updatedProgress = { ...progress };
   
-  // Prevent duplicate unlocks
   if (!updatedProgress.unlockedAchievements.includes(achievementId)) {
     updatedProgress.unlockedAchievements = [
       ...updatedProgress.unlockedAchievements,
@@ -242,10 +265,135 @@ export const unlockAchievement = (progress, achievementId) => {
 };
 
 /**
+ * NEW: Add credential to global inventory
+ */
+export const addCredentialToInventory = (progress, credential, scenarioId) => {
+  const updatedProgress = { ...progress };
+  
+  if (!updatedProgress.globalInventory) {
+    updatedProgress.globalInventory = { credentials: [], files: [], compromisedHosts: [] };
+  }
+  
+  const isDuplicate = updatedProgress.globalInventory.credentials.some(
+    c => c.username === credential.username && c.secret === credential.secret
+  );
+  
+  if (!isDuplicate) {
+    const newCred = {
+      id: `cred-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      type: credential.type,
+      username: credential.username,
+      secret: credential.secret,
+      sourceScenario: scenarioId,
+      acquiredAt: Date.now(),
+      usedIn: []
+    };
+    
+    updatedProgress.globalInventory.credentials = [
+      ...updatedProgress.globalInventory.credentials,
+      newCred
+    ];
+  }
+  
+  return updatedProgress;
+};
+
+/**
+ * NEW: Add file to global inventory
+ */
+export const addFileToInventory = (progress, file, scenarioId) => {
+  const updatedProgress = { ...progress };
+  
+  if (!updatedProgress.globalInventory) {
+    updatedProgress.globalInventory = { credentials: [], files: [], compromisedHosts: [] };
+  }
+  
+  const isDuplicate = updatedProgress.globalInventory.files.some(
+    f => f.name === file.name
+  );
+  
+  if (!isDuplicate) {
+    const newFile = {
+      id: `file-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      name: file.name,
+      content: file.content || '',
+      size: file.size || '0 KB',
+      sourceScenario: scenarioId,
+      acquiredAt: Date.now()
+    };
+    
+    updatedProgress.globalInventory.files = [
+      ...updatedProgress.globalInventory.files,
+      newFile
+    ];
+  }
+  
+  return updatedProgress;
+};
+
+/**
+ * NEW: Add compromised host to global inventory
+ */
+export const addCompromisedHost = (progress, host, scenarioId) => {
+  const updatedProgress = { ...progress };
+  
+  if (!updatedProgress.globalInventory) {
+    updatedProgress.globalInventory = { credentials: [], files: [], compromisedHosts: [] };
+  }
+  
+  const existingHost = updatedProgress.globalInventory.compromisedHosts.find(
+    h => h.hostname === host.hostname
+  );
+  
+  if (existingHost) {
+    const accessLevels = ['user', 'admin', 'system'];
+    const currentLevel = accessLevels.indexOf(existingHost.access);
+    const newLevel = accessLevels.indexOf(host.access);
+    
+    if (newLevel > currentLevel) {
+      existingHost.access = host.access;
+      existingHost.lastEscalation = Date.now();
+    }
+  } else {
+    const newHost = {
+      id: `host-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      hostname: host.hostname,
+      ip: host.ip,
+      access: host.access || 'user',
+      compromisedBy: scenarioId,
+      compromisedAt: Date.now()
+    };
+    
+    updatedProgress.globalInventory.compromisedHosts = [
+      ...updatedProgress.globalInventory.compromisedHosts,
+      newHost
+    ];
+  }
+  
+  return updatedProgress;
+};
+
+/**
+ * NEW: Mark credential as used in a scenario
+ */
+export const markCredentialUsed = (progress, credentialId, scenarioId) => {
+  const updatedProgress = { ...progress };
+  
+  if (!updatedProgress.globalInventory?.credentials) return updatedProgress;
+  
+  const cred = updatedProgress.globalInventory.credentials.find(c => c.id === credentialId);
+  if (cred && !cred.usedIn.includes(scenarioId)) {
+    cred.usedIn = [...cred.usedIn, scenarioId];
+  }
+  
+  return updatedProgress;
+};
+
+/**
  * Get progress statistics
  */
 export const getProgressStats = (progress) => {
-  const totalScenarios = 17; // Update this when adding scenarios
+  const totalScenarios = 17;
   
   return {
     completionPercentage: Math.round((progress.scenariosCompleted.length / totalScenarios) * 100),
@@ -256,7 +404,12 @@ export const getProgressStats = (progress) => {
     quizzesCompleted: Object.keys(progress.quizScores).length,
     averageQuizScore: calculateAverageQuizScore(progress),
     totalTimeSpent: calculateTotalTimeSpent(progress),
-    bestScenario: findBestScenario(progress)
+    bestScenario: findBestScenario(progress),
+    inventorySize: {
+      credentials: progress.globalInventory?.credentials?.length || 0,
+      files: progress.globalInventory?.files?.length || 0,
+      hosts: progress.globalInventory?.compromisedHosts?.length || 0
+    }
   };
 };
 
