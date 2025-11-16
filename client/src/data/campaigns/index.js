@@ -205,7 +205,7 @@ export const getAvailableCampaigns = (progress) => {
   });
 };
 
-export const isC campaignUnlocked = (campaignId, progress) => {
+export const isCampaignUnlocked = (campaignId, progress) => {
   const campaign = campaigns[campaignId];
   if (!campaign) return false;
   
