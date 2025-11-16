@@ -47,14 +47,14 @@ export default function SimulatorPage({
   // Initialize all state
   const state = useSimulatorState(scenarioId);
   
-  // Initialize scenario
+  // Initialize scenario - NOW WITH PROGRESS
   const {
     isLoadingScenario,
     showMissionBriefing,
     setShowMissionBriefing,
     briefingStorageKey,
     resetScenario
-  } = useScenarioInitialization(scenarioId, currentScenario);
+  } = useScenarioInitialization(scenarioId, currentScenario, progress);
   
   // Initialize completion handling
   const {
@@ -97,8 +97,8 @@ export default function SimulatorPage({
     setSimulatedFiles: state.setSimulatedFiles,
     setSimulatedFileSystem: state.setSimulatedFileSystem,
     setCredentialInventory: state.setCredentialInventory,
-    progress,              // ADD THIS
-    setProgress            // ADD THIS
+    progress,
+    setProgress
   });
   
   // Initialize command handling
@@ -156,7 +156,7 @@ export default function SimulatorPage({
     state.setHintsShown(initialState.hintsShown);
     processingRef.current = false;
     resetCompletion();
-  }, [scenarioId, resetCompletion]);
+  }, [scenarioId, resetCompletion, resetScenario, progress]);
 
   // Sub-shell timeout
   useEffect(() => {
