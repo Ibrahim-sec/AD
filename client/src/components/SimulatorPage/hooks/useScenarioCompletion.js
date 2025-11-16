@@ -7,6 +7,12 @@ import {
   addScenarioCompletion,
   unlockAchievement
 } from '@/lib/progressTracker';
+import { 
+  completeCampaignScenario, 
+  isCampaignComplete, 
+  completeCampaign 
+} from '@/lib/campaignManager';
+import { getUnlockableScenarios } from '@/lib/scenarioManager';
 import { achievements, getUnlockedAchievements } from '@/data/achievements';
 
 export const useScenarioCompletion = ({
@@ -21,20 +27,16 @@ export const useScenarioCompletion = ({
   const [showMissionDebrief, setShowMissionDebrief] = useState(false);
   const [completionStats, setCompletionStats] = useState(null);
   
-  // ADD THIS - prevent multiple simultaneous completions
   const completionInProgressRef = useRef(false);
 
   const completeScenario = useCallback((currentStats) => {
-    // Prevent multiple simultaneous calls
     if (completionInProgressRef.current || isMissionCompleted) {
       console.log('Completion already in progress or completed, skipping...');
       return;
     }
     
-    // Set flag immediately
     completionInProgressRef.current = true;
     
-    // Use passed stats or fallback to closure stats
     const statsToUse = currentStats || scenarioStats;
     
     setIsMissionCompleted(true);
@@ -45,7 +47,6 @@ export const useScenarioCompletion = ({
       statsToUse.hintsUsed
     );
     
-    // BUILD COMPLETION STATS
     const finalStats = {
       scoreEarned,
       stepsCompleted: currentScenario.steps.length,
@@ -54,7 +55,6 @@ export const useScenarioCompletion = ({
       hintsUsed: statsToUse.hintsUsed
     };
     
-    // STORE STATS FOR MODAL
     setCompletionStats(finalStats);
     
     let updatedProgress = { ...progress };
@@ -63,6 +63,25 @@ export const useScenarioCompletion = ({
       hintsUsed: statsToUse.hintsUsed,
       timeSpent
     });
+    
+    // Campaign integration
+    if (updatedProgress.activeCampaign) {
+      updatedProgress = completeCampaignScenario(updatedProgress, scenarioId, {
+        wrongAttempts: statsToUse.wrongAttempts,
+        hintsUsed: statsToUse.hintsUsed,
+        timeSpent
+      });
+      
+      if (isCampaignComplete(updatedProgress)) {
+        updatedProgress = completeCampaign(updatedProgress);
+      }
+    }
+    
+    // Check for unlocked scenarios
+    const unlockedScenarios = getUnlockableScenarios(updatedProgress, scenarioId);
+    if (unlockedScenarios.length > 0) {
+      updatedProgress.recentlyUnlocked = unlockedScenarios.map(s => s.id);
+    }
     
     const previousUnlocked = getUnlockedAchievements(progress);
     const newUnlocked = getUnlockedAchievements(updatedProgress);
@@ -92,7 +111,6 @@ export const useScenarioCompletion = ({
     setProgress
   ]);
 
-  // ADD THIS - reset completion flag when scenario changes
   const resetCompletion = useCallback(() => {
     setIsMissionCompleted(false);
     completionInProgressRef.current = false;
@@ -108,6 +126,6 @@ export const useScenarioCompletion = ({
     setShowMissionDebrief,
     completeScenario,
     completionStats,
-    resetCompletion  // ADD THIS
+    resetCompletion
   };
 };

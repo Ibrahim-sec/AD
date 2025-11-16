@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { safeGetItem } from '@/lib/safeStorage';
 import { getInitialHistories } from '@/lib/simulator/constants';
 
-export const useScenarioInitialization = (scenarioId, currentScenario) => {
+export const useScenarioInitialization = (scenarioId, currentScenario, progress) => {
   const [isLoadingScenario, setIsLoadingScenario] = useState(false);
   const briefingStorageKey = `hasSeenBriefing_${scenarioId}`;
   
@@ -16,6 +16,10 @@ export const useScenarioInitialization = (scenarioId, currentScenario) => {
   const resetScenario = () => {
     const histories = getInitialHistories(currentScenario);
     
+    // Load global inventory into session
+    const globalCreds = progress?.globalInventory?.credentials || [];
+    const globalFiles = progress?.globalInventory?.files || [];
+    
     return {
       currentStep: 0,
       activeMachine: 'attacker',
@@ -25,8 +29,8 @@ export const useScenarioInitialization = (scenarioId, currentScenario) => {
       attackerHistory: histories.attacker,
       serverHistory: histories.server,
       defenseHistory: histories.defense,
-      credentialInventory: [],
-      simulatedFiles: [],
+      credentialInventory: globalCreds,  // Start with global creds
+      simulatedFiles: globalFiles,        // Start with global files
       simulatedFileSystem: {},
       inspectingNode: null,
       isMissionCompleted: false,
