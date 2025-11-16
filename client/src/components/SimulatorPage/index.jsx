@@ -96,7 +96,9 @@ export default function SimulatorPage({
     scenarioStats: state.scenarioStats,
     setSimulatedFiles: state.setSimulatedFiles,
     setSimulatedFileSystem: state.setSimulatedFileSystem,
-    setCredentialInventory: state.setCredentialInventory
+    setCredentialInventory: state.setCredentialInventory,
+    progress,              // ADD THIS
+    setProgress            // ADD THIS
   });
   
   // Initialize command handling
